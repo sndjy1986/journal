@@ -418,8 +418,6 @@
                 client_id: GOOGLE_CONFIG.clientId,
                 scope: GOOGLE_CONFIG.scope,
                 callback: (tokenResponse) => {
-                    // This callback is executed after the user grants consent.
-                    // You can now use the access token to make API calls.
                     console.log('Access token received:', tokenResponse.access_token);
                 },
             });
@@ -438,12 +436,10 @@
             const hashedInput = await hashPassword(password);
             
             if (hashedInput === STORED_PASSWORD_HASH) {
-                // Successful login
                 document.getElementById('login-section').style.display = 'none';
                 document.getElementById('journal-section').style.display = 'block';
                 passwordInput.value = '';
                 
-                // Initialize Google APIs in background
                 initializeGoogleAPIs();
             } else {
                 showError('Incorrect password');
@@ -474,6 +470,35 @@
                 document.getElementById('entry-title').value = '';
             }
         });
+        
+        // NEW: Function to get or create the "Journal Entries" folder
+        async function getOrCreateFolderId() {
+            let folderId = null;
+
+            // Search for the folder
+            const response = await gapi.client.drive.files.list({
+                q: "mimeType='application/vnd.google-apps.folder' and name='Journal Entries' and trashed=false",
+                fields: 'files(id, name)',
+            });
+
+            if (response.result.files.length > 0) {
+                // Folder found
+                folderId = response.result.files[0].id;
+            } else {
+                // Folder not found, create it
+                const folderMetadata = {
+                    name: 'Journal Entries',
+                    mimeType: 'application/vnd.google-apps.folder',
+                };
+                const createResponse = await gapi.client.drive.files.create({
+                    resource: folderMetadata,
+                    fields: 'id',
+                });
+                folderId = createResponse.result.id;
+            }
+
+            return folderId;
+        }
 
         // Save to Google Drive
         document.getElementById('save-btn').addEventListener('click', async function() {
@@ -486,34 +511,34 @@
                 return;
             }
 
-            // Disable button during save
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving...';
             showStatus('Connecting to Google Drive...', 'info');
 
             try {
-                // Request an access token.
                 tokenClient.requestAccessToken();
+                
+                // NEW: Get the folder ID
+                const folderId = await getOrCreateFolderId();
 
                 showStatus('Creating file on Google Drive...', 'info');
 
-                // Create filename with timestamp
                 const now = new Date();
                 const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
                 const filename = entryTitle 
                     ? `journal_${timestamp}_${entryTitle.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}.txt`
                     : `journal_${timestamp}.txt`;
 
-                // Create file content
                 const fileContent = `Journal Entry - ${now.toLocaleString()}\n` +
                                   (entryTitle ? `Title: ${entryTitle}\n` : '') +
                                   `\n${entryText}\n`;
 
                 console.log('Attempting to upload file:', filename);
 
-                // Try the simple upload method first
+                // NEW: Add the folderId to the metadata
                 const fileMetadata = {
-                    name: filename
+                    name: filename,
+                    parents: [folderId], // Specify the folder
                 };
 
                 const form = new FormData();
@@ -535,7 +560,6 @@
                     const result = await response.json();
                     console.log('Upload successful:', result);
                     showStatus('Journal entry saved to Google Drive successfully!', 'success');
-                    // Clear the form after successful save
                     document.getElementById('journal-entry').value = '';
                     document.getElementById('entry-title').value = '';
                 } else {
@@ -565,7 +589,6 @@
                 showError(errorMessage);
                 console.error('Detailed error:', error);
             } finally {
-                // Re-enable button
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Save to Google Drive';
             }
@@ -583,19 +606,16 @@
                 return;
             }
 
-            // Create filename with timestamp
             const now = new Date();
             const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
             const filename = entryTitle 
                 ? `journal_${timestamp}_${entryTitle.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}.txt`
                 : `journal_${timestamp}.txt`;
 
-            // Create file content
             const fileContent = `Journal Entry - ${now.toLocaleString()}\n` +
                               (entryTitle ? `Title: ${entryTitle}\n` : '') +
                               `\n${entryText}\n`;
 
-            // Create and download file
             const blob = new Blob([fileContent], { type: 'text/plain' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -608,7 +628,6 @@
 
             showStatus('Journal entry downloaded successfully!', 'success');
             
-            // Clear the form after successful download
             document.getElementById('journal-entry').value = '';
             document.getElementById('entry-title').value = '';
         }
@@ -617,7 +636,6 @@
         function showError(message) {
             const errorEl = document.getElementById('login-error');
             if (document.getElementById('journal-section').style.display !== 'none') {
-                // Show error in save status if journal is open
                 showStatus(message, 'error');
             } else {
                 errorEl.textContent = message;
@@ -647,14 +665,13 @@
             document.getElementById('save-status').style.display = 'none';
         }
 
-        // News feed functionality (using memory storage instead of localStorage for artifacts)
+        // News feed functionality
         let newsCache = { html: '', timestamp: 0 };
         
         function loadNewsFeed() {
             const newsContent = document.getElementById('news-content');
-            const cacheDuration = 15 * 60 * 1000; // 15 minutes
+            const cacheDuration = 15 * 60 * 1000;
 
-            // Check cache
             if (newsCache.html && Date.now() - newsCache.timestamp < cacheDuration) {
                 newsContent.innerHTML = newsCache.html;
                 return;
