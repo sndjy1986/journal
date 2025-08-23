@@ -191,6 +191,12 @@
         transform: translateY(0);
     }
 
+    .btn:disabled {
+        background-color: #666;
+        cursor: not-allowed;
+        transform: none;
+    }
+
     .btn-secondary {
         background-color: rgba(255, 255, 255, 0.1);
         border: 0.125rem solid rgba(255, 255, 255, 0.25);
@@ -214,6 +220,16 @@
         color: #51cf66;
         background-color: rgba(81, 207, 102, 0.1);
         border: 0.125rem solid rgba(81, 207, 102, 0.3);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin: 1rem 0;
+        text-align: center;
+    }
+
+    .info-message {
+        color: #74c0fc;
+        background-color: rgba(116, 192, 252, 0.1);
+        border: 0.125rem solid rgba(116, 192, 252, 0.3);
         padding: 1rem;
         border-radius: 0.5rem;
         margin: 1rem 0;
@@ -346,6 +362,7 @@
                 
                 <div style="text-align: center;">
                     <button id="save-btn" class="btn">Save to Google Drive</button>
+                    <button id="save-local-btn" class="btn">Download as Text File</button>
                     <button id="clear-btn" class="btn btn-secondary">Clear Entry</button>
                     <button id="logout-btn" class="btn btn-secondary">Logout</button>
                 </div>
@@ -363,7 +380,18 @@
         <div id="speed-test">Speed: Loading...</div>
     </footer>
 
+    <!-- Load Google APIs -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
     <script>
+        // Configuration - REPLACE THESE WITH YOUR ACTUAL VALUES
+        const GOOGLE_CONFIG = {
+            apiKey: 'AIzaSyC55-oJVpJsjIv3Ek7ZuZSEyzD_TM-Uicg', // Replace with your actual API key
+            clientId: '702473947655-cs6448880982v51cpml7enc1k9ih04sn.apps.googleusercontent.com', // Replace with your actual client ID
+            scope: 'https://www.googleapis.com/auth/drive.file'
+        };
+
         // Password hashing and security
         async function hashPassword(password) {
             const encoder = new TextEncoder();
@@ -376,6 +404,39 @@
 
         // Store the hashed password - you should change this!
         const STORED_PASSWORD_HASH = '52d160c99f47dfb7b1ad082658d9feea951f16107f58e3fe5d3dd188c3013434'; // This is 'password' - CHANGE THIS!
+
+        // Google Drive integration variables
+        let isGapiLoaded = false;
+        let isGoogleSignedIn = false;
+
+        // Initialize Google APIs
+        function initializeGoogleAPIs() {
+            return new Promise((resolve, reject) => {
+                if (GOOGLE_CONFIG.apiKey === 'YOUR_API_KEY_HERE' || GOOGLE_CONFIG.clientId === 'YOUR_CLIENT_ID_HERE') {
+                    console.error('Google Drive API keys not configured');
+                    reject(new Error('Google Drive API not configured'));
+                    return;
+                }
+
+                gapi.load('client:auth2', async () => {
+                    try {
+                        await gapi.client.init({
+                            apiKey: GOOGLE_CONFIG.apiKey,
+                            clientId: GOOGLE_CONFIG.clientId,
+                            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+                            scope: GOOGLE_CONFIG.scope
+                        });
+
+                        const authInstance = gapi.auth2.getAuthInstance();
+                        isGoogleSignedIn = authInstance.isSignedIn.get();
+                        isGapiLoaded = true;
+                        resolve();
+                    } catch (error) {
+                        reject(error);
+                    }
+                });
+            });
+        }
 
         // Login functionality
         document.getElementById('login-btn').addEventListener('click', async function() {
@@ -394,6 +455,11 @@
                 document.getElementById('login-section').style.display = 'none';
                 document.getElementById('journal-section').style.display = 'block';
                 passwordInput.value = '';
+                
+                // Initialize Google APIs in background
+                if (!isGapiLoaded) {
+                    initializeGoogleAPIs().catch(console.error);
+                }
             } else {
                 showError('Incorrect password');
                 passwordInput.value = '';
@@ -424,61 +490,48 @@
             }
         });
 
-        // Google Drive integration
-        let isGDriveInitialized = false;
-        
-        function initializeGoogleDrive() {
-            if (isGDriveInitialized) return;
-            
-            // Load Google Drive API
-            const script = document.createElement('script');
-            script.src = 'https://apis.google.com/js/api.js';
-            script.onload = function() {
-                gapi.load('client:auth2', initClient);
-            };
-            document.head.appendChild(script);
-        }
-
-        async function initClient() {
-            await gapi.client.init({
-                apiKey: 'AIzaSyC55-oJVpJsjIv3Ek7ZuZSEyzD_TM-Uicg', // Replace with your API key
-                clientId: '702473947655-cs6448880982v51cpml7enc1k9ih04sn.apps.googleusercontent.com', // Replace with your client ID
-                discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-                scope: 'https://www.googleapis.com/auth/drive.file'
-            });
-            isGDriveInitialized = true;
-        }
-
         // Save to Google Drive
         document.getElementById('save-btn').addEventListener('click', async function() {
             const entryText = document.getElementById('journal-entry').value.trim();
             const entryTitle = document.getElementById('entry-title').value.trim();
+            const saveBtn = document.getElementById('save-btn');
             
             if (!entryText) {
                 showError('Please write something before saving');
                 return;
             }
 
-            showStatus('Saving to Google Drive...', 'info');
+            // Disable button during save
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+            showStatus('Preparing to save to Google Drive...', 'info');
 
             try {
-                // Initialize Google Drive if not already done
-                if (!isGDriveInitialized) {
-                    initializeGoogleDrive();
-                    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for init
+                // Check if APIs are configured
+                if (GOOGLE_CONFIG.apiKey === 'AIzaSyC55-oJVpJsjIv3Ek7ZuZSEyzD_TM-Uicg' || GOOGLE_CONFIG.clientId === '702473947655-cs6448880982v51cpml7enc1k9ih04sn.apps.googleusercontent.com') {
+                    throw new Error('Google Drive API not configured. Please add your API key and Client ID.');
                 }
 
-                // Check if user is signed in
+                // Initialize Google APIs if needed
+                if (!isGapiLoaded) {
+                    showStatus('Initializing Google Drive connection...', 'info');
+                    await initializeGoogleAPIs();
+                }
+
+                // Check authentication
                 const authInstance = gapi.auth2.getAuthInstance();
                 if (!authInstance.isSignedIn.get()) {
+                    showStatus('Please sign in to Google Drive...', 'info');
                     await authInstance.signIn();
                 }
+
+                showStatus('Uploading to Google Drive...', 'info');
 
                 // Create filename with timestamp
                 const now = new Date();
                 const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
                 const filename = entryTitle 
-                    ? `journal_${timestamp}_${entryTitle.replace(/[^a-zA-Z0-9]/g, '_')}.txt`
+                    ? `journal_${timestamp}_${entryTitle.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}.txt`
                     : `journal_${timestamp}.txt`;
 
                 // Create file content
@@ -486,47 +539,119 @@
                                   (entryTitle ? `Title: ${entryTitle}\n` : '') +
                                   `\n${entryText}\n`;
 
-                // Upload to Google Drive
-                const fileMetadata = {
+                // Upload to Google Drive using the simpler approach
+                const boundary = '-------314159265358979323846';
+                const delimiter = "\r\n--" + boundary + "\r\n";
+                const close_delim = "\r\n--" + boundary + "--";
+
+                const metadata = {
                     'name': filename,
-                    'parents': ['YOUR_FOLDER_ID'] // Replace with your journal folder ID
+                    'mimeType': 'text/plain'
                 };
 
-                const form = new FormData();
-                form.append('metadata', new Blob([JSON.stringify(fileMetadata)], {type: 'application/json'}));
-                form.append('file', new Blob([fileContent], {type: 'text/plain'}));
+                const multipartRequestBody =
+                    delimiter +
+                    'Content-Type: application/json\r\n\r\n' +
+                    JSON.stringify(metadata) +
+                    delimiter +
+                    'Content-Type: text/plain\r\n\r\n' +
+                    fileContent +
+                    close_delim;
 
-                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                    method: 'POST',
-                    headers: new Headers({
-                        'Authorization': `Bearer ${gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token}`
-                    }),
-                    body: form
+                const request = gapi.client.request({
+                    'path': 'https://www.googleapis.com/upload/drive/v3/files',
+                    'method': 'POST',
+                    'params': {'uploadType': 'multipart'},
+                    'headers': {
+                        'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+                    },
+                    'body': multipartRequestBody
                 });
 
-                if (response.ok) {
+                const response = await request;
+                
+                if (response.status === 200) {
                     showStatus('Entry saved successfully to Google Drive!', 'success');
                     // Clear the form after successful save
                     document.getElementById('journal-entry').value = '';
                     document.getElementById('entry-title').value = '';
                 } else {
-                    throw new Error('Failed to save to Google Drive');
+                    throw new Error(`Upload failed with status: ${response.status}`);
                 }
 
             } catch (error) {
                 console.error('Error saving to Google Drive:', error);
-                showError('Failed to save to Google Drive. Please try again.');
+                if (error.message.includes('not configured')) {
+                    showError('Google Drive is not properly configured. Using local download instead.');
+                    // Fallback to local download
+                    downloadAsTextFile();
+                } else if (error.message.includes('popup_blocked')) {
+                    showError('Please allow popups and try again, or use local download instead.');
+                } else {
+                    showError('Failed to save to Google Drive: ' + error.message);
+                }
+            } finally {
+                // Re-enable button
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save to Google Drive';
             }
         });
+
+        // Local download functionality as fallback
+        document.getElementById('save-local-btn').addEventListener('click', downloadAsTextFile);
+
+        function downloadAsTextFile() {
+            const entryText = document.getElementById('journal-entry').value.trim();
+            const entryTitle = document.getElementById('entry-title').value.trim();
+            
+            if (!entryText) {
+                showError('Please write something before downloading');
+                return;
+            }
+
+            // Create filename with timestamp
+            const now = new Date();
+            const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = entryTitle 
+                ? `journal_${timestamp}_${entryTitle.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}.txt`
+                : `journal_${timestamp}.txt`;
+
+            // Create file content
+            const fileContent = `Journal Entry - ${now.toLocaleString()}\n` +
+                              (entryTitle ? `Title: ${entryTitle}\n` : '') +
+                              `\n${entryText}\n`;
+
+            // Create and download file
+            const blob = new Blob([fileContent], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            showStatus('Journal entry downloaded successfully!', 'success');
+            
+            // Clear the form after successful download
+            document.getElementById('journal-entry').value = '';
+            document.getElementById('entry-title').value = '';
+        }
 
         // Utility functions
         function showError(message) {
             const errorEl = document.getElementById('login-error');
-            errorEl.textContent = message;
-            errorEl.style.display = 'block';
-            setTimeout(() => {
-                errorEl.style.display = 'none';
-            }, 5000);
+            if (document.getElementById('journal-section').style.display !== 'none') {
+                // Show error in save status if journal is open
+                showStatus(message, 'error');
+            } else {
+                errorEl.textContent = message;
+                errorEl.style.display = 'block';
+                setTimeout(() => {
+                    errorEl.style.display = 'none';
+                }, 8000);
+            }
         }
 
         function showStatus(message, type) {
@@ -539,7 +664,7 @@
             if (type === 'success' || type === 'error') {
                 setTimeout(() => {
                     statusEl.style.display = 'none';
-                }, 5000);
+                }, 8000);
             }
         }
 
@@ -548,19 +673,17 @@
             document.getElementById('save-status').style.display = 'none';
         }
 
-        // Include your existing JavaScript functions for news ticker and network info
+        // News feed functionality (using memory storage instead of localStorage for artifacts)
+        let newsCache = { html: '', timestamp: 0 };
+        
         function loadNewsFeed() {
             const newsContent = document.getElementById('news-content');
-            const cacheKey = 'foxNewsFeedCache';
-            const cacheDuration = 15 * 60 * 1000;
+            const cacheDuration = 15 * 60 * 1000; // 15 minutes
 
-            const cachedData = localStorage.getItem(cacheKey);
-            if (cachedData) {
-                const { html, timestamp } = JSON.parse(cachedData);
-                if (Date.now() - timestamp < cacheDuration) {
-                    newsContent.innerHTML = html;
-                    return;
-                }
+            // Check cache
+            if (newsCache.html && Date.now() - newsCache.timestamp < cacheDuration) {
+                newsContent.innerHTML = newsCache.html;
+                return;
             }
 
             fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://moxie.foxnews.com/google-publisher/latest.xml'))
@@ -572,8 +695,9 @@
                         html += `<a href="${item.link}" target="_blank">🦊 ${item.title}</a>`;
                     });
                 }
-                newsContent.innerHTML = html || '🦊 News feed temporarily unavailable 🦊';
-                localStorage.setItem(cacheKey, JSON.stringify({ html, timestamp: Date.now() }));
+                html = html || '🦊 News feed temporarily unavailable 🦊';
+                newsContent.innerHTML = html;
+                newsCache = { html, timestamp: Date.now() };
             })
             .catch(error => {
                 newsContent.innerHTML = '🦊 News feed temporarily unavailable 🦊';
@@ -612,13 +736,16 @@
                 const estimatedSpeed = Math.round(Math.random() * 50 + 10); // Simplified for demo
                 speedTestEl.textContent = `Speed: ${estimatedSpeed} Mbps`;
             };
+            testImage.onerror = function() {
+                speedTestEl.textContent = 'Speed: Test failed';
+            };
             testImage.src = 'https://via.placeholder.com/1024x1024.jpg?' + Date.now();
         }
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             loadNewsFeed();
-            setInterval(loadNewsFeed, 900000);
+            setInterval(loadNewsFeed, 900000); // 15 minutes
             
             loadNetworkInfo();
             runSpeedTest();
@@ -626,6 +753,3 @@
     </script>
 </body>
 </html>
-
-
-
