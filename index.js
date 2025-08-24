@@ -1,5 +1,5 @@
-// CORRECTED: Fixed the typo in the CDN URL (https://)
-import { Router } from 'https://esm.sh/itty-router@4';
+// CORRECTED: Imported Router from the new local library file
+import { Router } from './lib/itty-router.js';
 import { handleLogin, handleRegister } from './handlers/auth.js';
 import { handleGetEntries, handleSaveEntry, handleDeleteEntry } from './handlers/entries.js';
 import { handleStatic } from './handlers/static.js';
@@ -42,6 +42,9 @@ export default {
             .handle(request, env, ctx)
             .then(response => {
                 // Apply CORS headers to every response
+                if (!response) {
+                    return new Response('Not Found', { status: 404 });
+                }
                 const newHeaders = new Headers(response.headers);
                 Object.entries(corsHeaders).forEach(([key, value]) => {
                     newHeaders.set(key, value);
