@@ -498,6 +498,12 @@ async function handleRequest(request, env) {
 
             // Sidebar Functions
             function toggleSidebar() {
+                const token = localStorage.getItem('journal_token');
+                if (!token) {
+                    showStatus('Please log in to access entries.', 'error');
+                    return;
+                }
+                
                 const isOpen = sidebar.classList.contains('open');
                 if (isOpen) {
                     sidebar.classList.remove('open');
@@ -536,11 +542,16 @@ async function handleRequest(request, env) {
             }
 
             async function deleteEntry(timestamp) {
+                const token = localStorage.getItem('journal_token');
+                if (!token) {
+                    showStatus('Please log in to delete entries.', 'error');
+                    return;
+                }
+                
                 if (!confirm('Are you sure you want to delete this entry? This action cannot be undone.')) {
                     return;
                 }
                 
-                const token = localStorage.getItem('journal_token');
                 const { response, data } = await makeApiCall(\`/entries/\${timestamp}\`, {
                     method: 'DELETE',
                     headers: { 'Authorization': \`Bearer \${token}\` }
@@ -676,10 +687,19 @@ async function handleRequest(request, env) {
                 localStorage.removeItem('journal_user'); 
                 authSection.style.display = 'block'; 
                 journalSection.style.display = 'none'; 
+                
+                // Hide and reset sidebar
                 sidebarToggle.style.display = 'none';
                 sidebar.classList.remove('open');
                 mainContent.classList.remove('sidebar-open');
+                sidebarToggle.classList.remove('sidebar-open');
+                toggleIcon.textContent = '→';
+                
+                // Clear sensitive data
+                currentEntries = [];
+                entryList.innerHTML = '';
                 closeEntryViewer();
+                
                 // Clear forms
                 document.getElementById('login-username').value = '';
                 document.getElementById('login-password').value = '';
@@ -723,7 +743,12 @@ async function handleRequest(request, env) {
             // Load Entries Function
             async function loadEntries() {
                 const token = localStorage.getItem('journal_token');
-                if (!token) return;
+                if (!token) {
+                    // Clear entries if no token
+                    currentEntries = [];
+                    entryList.innerHTML = '<p style="text-align: center; color: var(--primary-link-color); font-size: 0.9rem;">Please log in to view entries.</p>';
+                    return;
+                }
                 
                 const { response, data } = await makeApiCall('/entries', {
                     headers: { 'Authorization': \`Bearer \${token}\` }
@@ -735,6 +760,9 @@ async function handleRequest(request, env) {
                 } else if (response.status === 401) {
                     showStatus('Session expired. Please log in again.', 'error');
                     logoutBtn.click();
+                } else {
+                    currentEntries = [];
+                    entryList.innerHTML = '<p style="text-align: center; color: var(--primary-link-color); font-size: 0.9rem;">Failed to load entries.</p>';
                 }
             }
             
