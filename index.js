@@ -161,7 +161,6 @@ async function handleRequest(request, env) {
             
             .sidebar-toggle.sidebar-open {
                 right: calc(var(--sidebar-width) + 10px);
-                border-radius: 0.5rem 0 0 0.5rem;
             }
             
             .sidebar h3 {
@@ -380,7 +379,7 @@ async function handleRequest(request, env) {
                 }
                 
                 .sidebar-toggle.sidebar-open {
-                    right: 10px;
+                    right: 10px; /* Keep button in same position on mobile */
                 }
                 
                 .journal-container {
@@ -501,13 +500,11 @@ async function handleRequest(request, env) {
                 const isOpen = sidebar.classList.contains('open');
                 if (isOpen) {
                     sidebar.classList.remove('open');
-                    mainContent.classList.remove('sidebar-open');
-                    sidebarToggle.classList.remove('sidebar-open');
-                    toggleIcon.textContent = '→';
+                    sidebarToggle.style.display = 'none'; // Hide button when closed
                 } else {
                     sidebar.classList.add('open');
-                    mainContent.classList.add('sidebar-open');
                     sidebarToggle.classList.add('sidebar-open');
+                    sidebarToggle.style.display = 'block'; // Show button when open
                     toggleIcon.textContent = '←';
                     loadEntries(); // Refresh entries when opening
                 }
@@ -682,12 +679,10 @@ async function handleRequest(request, env) {
                 authSection.style.display = 'block'; 
                 journalSection.style.display = 'none'; 
                 
-                // Hide and reset sidebar
+                // Hide and reset sidebar completely
                 sidebarToggle.style.display = 'none';
                 sidebar.classList.remove('open');
-                mainContent.classList.remove('sidebar-open');
                 sidebarToggle.classList.remove('sidebar-open');
-                toggleIcon.textContent = '→';
                 
                 // Clear sensitive data
                 currentEntries = [];
@@ -807,7 +802,9 @@ async function handleRequest(request, env) {
             function showJournalView() { 
                 authSection.style.display = 'none'; 
                 journalSection.style.display = 'block'; 
+                // Show a small arrow to indicate sidebar is available
                 sidebarToggle.style.display = 'block';
+                sidebarToggle.innerHTML = '<span id="toggle-icon">→</span>';
                 welcomeMessage.textContent = \`Welcome, \${localStorage.getItem('journal_user')}!\`; 
                 loadEntries(); 
             }
