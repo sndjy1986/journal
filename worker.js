@@ -1,6 +1,7 @@
 // A library for handling JWTs. You'll need to add this as a dependency.
 import { sign, verify } from '@tsndr/cloudflare-worker-jwt';
 
+
 export default {
     async fetch(request, env) {
         const url = new URL(request.url);
