@@ -1,4 +1,4 @@
-// CORRECTED: Imported 'itty-router' from a CDN URL
+// CORRECTED: Fixed the typo in the CDN URL (https://)
 import { Router } from 'https://esm.sh/itty-router@4';
 import { handleLogin, handleRegister } from './handlers/auth.js';
 import { handleGetEntries, handleSaveEntry, handleDeleteEntry } from './handlers/entries.js';
