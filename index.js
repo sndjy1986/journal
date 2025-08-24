@@ -1,5 +1,5 @@
-import { Router } from 'itty-router';
-// CORRECTED: Added .js extension to all handler imports
+// CORRECTED: Imported 'itty-router' from a CDN URL
+import { Router } from 'https://esm.sh/itty-router@4';
 import { handleLogin, handleRegister } from './handlers/auth.js';
 import { handleGetEntries, handleSaveEntry, handleDeleteEntry } from './handlers/entries.js';
 import { handleStatic } from './handlers/static.js';
