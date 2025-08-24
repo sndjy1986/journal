@@ -1,4 +1,5 @@
-import { sign } from '@tsndr/cloudflare-worker-jwt';
+// CORRECTED: Imported 'sign' from a CDN URL
+import { sign } from 'https://esm.sh/@tsndr/cloudflare-worker-jwt@2.3.0';
 
 // Common headers for JSON responses
 const jsonHeaders = { 'Content-Type': 'application/json' };
