@@ -30,7 +30,7 @@ async function verifyAuth(request, env) {
         const parts = token.split('.');
         const payloadJson = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
         const payload = JSON.parse(payloadJson);
-
+        
         return payload.username ? payload : null;
     } catch (err) {
         console.error('JWT verification/decoding error:', err);
@@ -65,7 +65,7 @@ export async function handleSaveEntry(request, env) {
         };
 
         await env.JOURNAL_KV.put(entryKey, JSON.stringify(entryData));
-
+        
         return new Response(JSON.stringify({ success: true }), { status: 201, headers: jsonHeaders });
     } catch (e) {
         console.error('Save entry error:', e);
@@ -84,17 +84,17 @@ export async function handleGetEntries(request, env) {
 
     try {
         const list = await env.JOURNAL_KV.list({ prefix: `entry:${payload.username}:` });
-
+        
         const promises = list.keys.map(async (key) => {
             const value = await env.JOURNAL_KV.get(key.name);
             return value ? JSON.parse(value) : null;
         });
 
         const entries = (await Promise.all(promises)).filter(entry => entry !== null);
-
+        
         // Sort by timestamp, newest first
         entries.sort((a, b) => b.timestamp - a.timestamp);
-
+        
         return new Response(JSON.stringify(entries), { status: 200, headers: jsonHeaders });
     } catch (e) {
         console.error('Get entries error:', e);
@@ -119,7 +119,7 @@ export async function handleDeleteEntry(request, env) {
     try {
         const entryKey = `entry:${payload.username}:${timestamp}`;
         await env.JOURNAL_KV.delete(entryKey);
-
+        
         return new Response(JSON.stringify({ success: true }), { status: 200, headers: jsonHeaders });
     } catch (e) {
         console.error('Delete entry error:', e);
