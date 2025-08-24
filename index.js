@@ -127,6 +127,23 @@ async function handleRequest(request, env) {
                 transition: all 0.125s ease-in-out;
                 box-sizing: border-box;
             }
+            
+            /* Fix dropdown styling */
+            select {
+                background-color: var(--primary-background-color);
+                border: 0.125rem solid rgba(255, 255, 255, 0.25);
+            }
+            
+            select option {
+                background-color: var(--primary-background-color);
+                color: var(--primary-font-color);
+                padding: 0.5rem;
+            }
+            
+            select:focus {
+                outline: none;
+                border-color: var(--orange-color);
+            }
             textarea { min-height: 15rem; resize: vertical; }
             .btn {
                 background-color: var(--orange-color);
