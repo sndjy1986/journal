@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private Journal</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" id="theme-toggle" title="Toggle theme">🌙</button>
+    
+    <main id="main-content">
+        <div class="journal-container">
+            <h1>✨ Private Journal ✨</h1>
+            
+            <div id="auth-section">
+                <div id="login-form">
+                    <h2>Welcome Back</h2>
+                    <div class="input-group floating">
+                        <input type="text" id="login-username" placeholder=" ">
+                        <label class="floating-label">Username</label>
+                    </div>
+                    <div class="input-group floating">
+                        <input type="password" id="login-password" placeholder=" ">
+                        <label class="floating-label">Password</label>
+                    </div>
+                    <div style="text-align: center;">
+                        <button id="login-btn" class="btn">Sign In</button>
+                    </div>
+                    <p style="text-align: center;">Don't have an account? <a href="#" id="show-register">Create one here</a>.</p>
+                </div>
+                
+                <div id="register-form" style="display: none;">
+                    <h2>Join Us</h2>
+                    <div class="input-group floating">
+                        <input type="text" id="register-username" placeholder=" ">
+                        <label class="floating-label">Choose Username</label>
+                    </div>
+                    <div class="input-group floating">
+                        <input type="password" id="register-password" placeholder=" ">
+                        <label class="floating-label">Create Password</label>
+                    </div>
+                    <div style="text-align: center;">
+                        <button id="register-btn" class="btn">Create Account</button>
+                    </div>
+                    <p style="text-align: center;">Already have an account? <a href="#" id="show-login">Sign in here</a>.</p>
+                </div>
+                
+                <div id="auth-error" class="error-message" style="display: none;"></div>
+            </div>
+            
+            <div id="journal-section" style="display: none;">
+                <h2 id="welcome-message"></h2>
+                
+                <!-- Writing Prompt -->
+                <div class="writing-prompt" id="writing-prompt-section">
+                    <div class="prompt-text" id="prompt-text">What made you smile today?</div>
+                    <button class="new-prompt-btn" id="new-prompt-btn">✨ New Prompt</button>
+                </div>
+                
+                <!-- Font Selector -->
+                <div class="input-group">
+                    <label for="font-selector">Writing Font:</label>
+                    <select id="font-selector">
+                        <option value="'Lora', serif">Lora (Elegant)</option>
+                        <option value="'Fira Code', monospace">Fira Code (Code)</option>
+                        <option value="'Roboto Mono', monospace">Roboto Mono (Clean)</option>
+                        <option value="'Inter', sans-serif">Inter (Modern)</option>
+                    </select>
+                </div>
+                
+                <!-- Mood Selector -->
+                <div class="mood-selector">
+                    <label>How are you feeling?</label>
+                    <div class="mood-options">
+                        <button class="mood-btn" data-mood="😊" title="Happy">😊</button>
+                        <button class="mood-btn" data-mood="😐" title="Neutral">😐</button>
+                        <button class="mood-btn" data-mood="😔" title="Sad">😔</button>
+                        <button class="mood-btn" data-mood="🤩" title="Excited">🤩</button>
+                        <button class="mood-btn" data-mood="😰" title="Anxious">😰</button>
+                        <button class="mood-btn" data-mood="🤔" title="Thoughtful">🤔</button>
+                        <button class="mood-btn" data-mood="😴" title="Tired">😴</button>
+                        <button class="mood-btn" data-mood="💪" title="Motivated">💪</button>
+                    </div>
+                </div>
+                
+                <!-- Entry Title -->
+                <div class="input-group floating">
+                    <input type="text" id="entry-title" placeholder=" ">
+                    <label class="floating-label">Entry Title (optional)</label>
+                </div>
+                
+                <!-- Tags Input -->
+                <div class="input-group tags-input-container">
+                    <label for="entry-tags">Tags (comma-separated):</label>
+                    <input type="text" id="entry-tags" placeholder="work, personal, ideas, gratitude...">
+                    <div class="tag-suggestions" id="tag-suggestions"></div>
+                </div>
+                
+                <!-- Editor Container -->
+                <div class="editor-container">
+                    <div class="editor-toolbar">
+                        <button class="tool-btn" data-tool="bold" title="Bold">**B**</button>
+                        <button class="tool-btn" data-tool="italic" title="Italic">*I*</button>
+                        <button class="tool-btn" data-tool="heading" title="Heading"># H</button>
+                        <button class="tool-btn" data-tool="quote" title="Quote">" Quote</button>
+                        <button class="tool-btn" data-tool="list" title="List">• List</button>
+                    </div>
+                    <div class="input-group">
+                        <label for="journal-entry">Your thoughts:</label>
+                        <textarea id="journal-entry" placeholder="Start writing your story..."></textarea>
+                    </div>
+                </div>
+                
+                <!-- Writing Stats -->
+                <div class="writing-stats" id="writing-stats">
+                    <div class="stat-item">
+                        <span class="stat-value" id="word-count">0</span>
+                        <span class="stat-label">words</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="char-count">0</span>
+                        <span class="stat-label">characters</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="read-time">0</span>
+                        <span class="stat-label">min read</span>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div style="text-align: center;">
+                    <button id="save-btn" class="btn">💾 Save Entry</button>
+                    <button id="export-btn" class="btn export-btn">📄 Export All</button>
+                    <button id="logout-btn" class="btn btn-secondary">👋 Logout</button>
+                </div>
+                
+                <div id="save-status" style="display: none;"></div>
+                
+                <!-- Entry Viewer -->
+                <div id="entry-viewer" class="entry-viewer">
+                    <button class="close-viewer" id="close-viewer">← Back to Writing</button>
+                    <h3 id="viewer-title">Entry Title</h3>
+                    <div class="entry-meta" id="viewer-meta">
+                        <span id="viewer-date">Date</span>
+                        <span id="viewer-mood">😊</span>
+                        <div id="viewer-tags" class="entry-tags"></div>
+                    </div>
+                    <div class="entry-content" id="viewer-content">Entry content will appear here...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Sidebar Toggle Button -->
+    <button class="sidebar-toggle" id="sidebar-toggle">
+        <span id="toggle-icon">📖</span>
+    </button>
+    
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <h3>📚 Your Journal</h3>
+        
+        <!-- Sidebar Controls -->
+        <div class="sidebar-controls">
+            <input type="text" class="search-box" id="search-box" placeholder="🔍 Search entries...">
+            <select class="filter-select" id="filter-select">
+                <option value="all">All entries</option>
+                <option value="recent">Last 7 days</option>
+                <option value="month">This month</option>
+                <option value="mood">By mood</option>
+            </select>
+        </div>
+        
+        <div class="entry-list" id="entry-list">
+            <p style="text-align: center; color: var(--primary-link-color); font-size: 0.9rem;">Loading entries...</p>
+        </div>
+    </div>
+    
+    <!-- Export Modal -->
+    <div class="modal-overlay" id="export-modal">
+        <div class="modal">
+            <h3>📄 Export Your Journal</h3>
+            <p>Choose your export format:</p>
+            <div class="modal-buttons">
+                <button class="modal-btn primary" id="export-json">JSON Format</button>
+                <button class="modal-btn primary" id="export-txt">Text Format</button>
+                <button class="modal-btn secondary" id="cancel-export">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./script.js"></script>
+</body>
+</html>
