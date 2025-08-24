@@ -1,5 +1,5 @@
 name = "my-journal-worker"
-main = "src/index.js" # This line points to your main worker script
+main = "index.js" # This line points to your main worker script
 compatibility_date = "2024-03-20" # You can use a recent date
 
 # This section links your KV Namespace to the worker
