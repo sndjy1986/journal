@@ -235,18 +235,31 @@ async function handleRequest(request, env) {
             // Utility function to make API calls
             async function makeApiCall(endpoint, options = {}) {
                 try {
-                    const response = await fetch(\`\${apiUrl}\${endpoint}\`, {
+                    const url = \`\${apiUrl}\${endpoint}\`;
+                    console.log('Making API call to:', url);
+                    
+                    const requestOptions = {
                         headers: {
                             'Content-Type': 'application/json',
                             ...options.headers
                         },
                         ...options
-                    });
+                    };
+                    
+                    console.log('Request options:', requestOptions);
+                    
+                    const response = await fetch(url, requestOptions);
+                    
+                    console.log('Response status:', response.status);
+                    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
                     
                     let data;
                     try {
-                        data = await response.json();
+                        const responseText = await response.text();
+                        console.log('Response text:', responseText);
+                        data = responseText ? JSON.parse(responseText) : {};
                     } catch (e) {
+                        console.error('Failed to parse response as JSON:', e);
                         data = { error: 'Invalid response from server' };
                     }
                     
@@ -520,18 +533,32 @@ async function handleLogin(request, env) {
 
         const secret = env.JWT_SECRET;
         if (!secret) {
-            throw new Error('JWT_SECRET not configured in worker environment');
+            console.error('JWT_SECRET not configured');
+            return new Response(JSON.stringify({ error: 'Server configuration error' }), { 
+                status: 500, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
         }
 
-        const token = await sign({ 
-            username, 
-            exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) // 24 hours
-        }, secret);
+        try {
+            const token = await sign({ 
+                username, 
+                iat: Math.floor(Date.now() / 1000),
+                exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) // 24 hours
+            }, secret);
+            
+            return new Response(JSON.stringify({ token }), { 
+                status: 200, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+        } catch (signError) {
+            console.error('JWT signing error:', signError);
+            return new Response(JSON.stringify({ error: 'Authentication error' }), { 
+                status: 500, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+        }
         
-        return new Response(JSON.stringify({ token }), { 
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        });
     } catch (e) {
         console.error('Login error:', e);
         return new Response(JSON.stringify({ error: 'Internal server error' }), { 
@@ -545,7 +572,7 @@ async function handleLogin(request, env) {
 async function handleSaveEntry(request, env) {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+        return new Response(JSON.stringify({ error: 'Unauthorized - No token provided' }), { 
             status: 401, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         });
@@ -553,7 +580,40 @@ async function handleSaveEntry(request, env) {
 
     try {
         const token = authHeader.substring(7);
-        const { payload } = await verify(token, env.JWT_SECRET);
+        
+        if (!env.JWT_SECRET) {
+            console.error('JWT_SECRET not configured');
+            return new Response(JSON.stringify({ error: 'Server configuration error' }), { 
+                status: 500, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+        }
+
+        let payload;
+        try {
+            const verifyResult = await verify(token, env.JWT_SECRET);
+            if (!verifyResult) {
+                return new Response(JSON.stringify({ error: 'Invalid token' }), { 
+                    status: 401, 
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+                });
+            }
+            payload = verifyResult.payload;
+        } catch (verifyError) {
+            console.error('JWT verify error:', verifyError);
+            return new Response(JSON.stringify({ error: 'Invalid or expired token' }), { 
+                status: 401, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+        }
+
+        if (!payload || !payload.username) {
+            return new Response(JSON.stringify({ error: 'Invalid token payload' }), { 
+                status: 401, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+        }
+
         const { title, content } = await request.json();
 
         if (!content || content.trim() === '') {
@@ -580,8 +640,8 @@ async function handleSaveEntry(request, env) {
         });
     } catch (e) {
         console.error('Save entry error:', e);
-        return new Response(JSON.stringify({ error: 'Invalid token or internal error' }), { 
-            status: 401, 
+        return new Response(JSON.stringify({ error: 'Internal server error' }), { 
+            status: 500, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         });
     }
@@ -591,7 +651,7 @@ async function handleSaveEntry(request, env) {
 async function handleGetEntries(request, env) {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+        return new Response(JSON.stringify({ error: 'Unauthorized - No token provided' }), { 
             status: 401, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         });
@@ -599,11 +659,45 @@ async function handleGetEntries(request, env) {
 
     try {
         const token = authHeader.substring(7);
-        const { payload } = await verify(token, env.JWT_SECRET);
+        
+        if (!env.JWT_SECRET) {
+            console.error('JWT_SECRET not configured');
+            return new Response(JSON.stringify({ error: 'Server configuration error' }), { 
+                status: 500, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+        }
+
+        let payload;
+        try {
+            const verifyResult = await verify(token, env.JWT_SECRET);
+            if (!verifyResult) {
+                return new Response(JSON.stringify({ error: 'Invalid token' }), { 
+                    status: 401, 
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+                });
+            }
+            payload = verifyResult.payload;
+        } catch (verifyError) {
+            console.error('JWT verify error:', verifyError);
+            return new Response(JSON.stringify({ error: 'Invalid or expired token' }), { 
+                status: 401, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+        }
+
+        if (!payload || !payload.username) {
+            return new Response(JSON.stringify({ error: 'Invalid token payload' }), { 
+                status: 401, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+        }
         
         const list = await env.JOURNAL_KV.list({ prefix: `entry:${payload.username}:` });
         const promises = list.keys.map(async (key) => {
             const value = await env.JOURNAL_KV.get(key.name);
+            if (!value) return null; // Skip if value doesn't exist
+            
             try {
                 return JSON.parse(value);
             } catch (e) {
@@ -617,7 +711,7 @@ async function handleGetEntries(request, env) {
             }
         });
         
-        const entries = await Promise.all(promises);
+        const entries = (await Promise.all(promises)).filter(entry => entry !== null);
         
         // Sort by timestamp, newest first
         entries.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
@@ -628,8 +722,8 @@ async function handleGetEntries(request, env) {
         });
     } catch (e) {
         console.error('Get entries error:', e);
-        return new Response(JSON.stringify({ error: 'Invalid token or internal error' }), { 
-            status: 401, 
+        return new Response(JSON.stringify({ error: 'Internal server error' }), { 
+            status: 500, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         });
     }
