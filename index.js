@@ -5,7 +5,7 @@ import { sign, verify } from '@tsndr/cloudflare-worker-jwt';
 // Define CORS headers that will be added to every response
 const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, DELETE',
   'Access-Control-Allow-Origin': '*', // For production, you might want to restrict this to your actual domain
 };
 
@@ -38,6 +38,10 @@ export default {
         // Route for getting all journal entries for a user
         if (url.pathname === '/entries' && request.method === 'GET') {
             return handleGetEntries(request, env);
+        }
+        // Route for deleting a journal entry
+        if (url.pathname.startsWith('/entries/') && request.method === 'DELETE') {
+            return handleDeleteEntry(request, env);
         }
 
         // Fallback for any other request
@@ -75,7 +79,11 @@ async function handleRequest(request, env) {
                 --primary-font-color: #FFFFFC;
                 --primary-link-color: rgba(255, 255, 252, 0.75);
                 --orange-color: #F05E1C;
+                --sidebar-width: 400px;
             }
+            
+            * { box-sizing: border-box; }
+            
             body {
                 margin: 0;
                 background-color: var(--primary-background-color);
@@ -83,7 +91,9 @@ async function handleRequest(request, env) {
                 font-family: "Fira Code", monospace;
                 font-size: 1rem;
                 line-height: 1.5;
+                overflow-x: hidden;
             }
+            
             main {
                 display: flex;
                 flex-direction: column;
@@ -91,7 +101,13 @@ async function handleRequest(request, env) {
                 align-items: center;
                 min-height: 100vh;
                 padding: 2rem 1rem;
+                transition: margin-right 0.3s ease;
             }
+            
+            main.sidebar-open {
+                margin-right: var(--sidebar-width);
+            }
+            
             .journal-container {
                 background: rgba(255, 255, 255, 0.05);
                 backdrop-filter: blur(10px);
@@ -102,6 +118,187 @@ async function handleRequest(request, env) {
                 border: 0.125rem solid rgba(255, 255, 255, 0.15);
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             }
+            
+            /* Sidebar Styles */
+            .sidebar {
+                position: fixed;
+                top: 0;
+                right: -var(--sidebar-width);
+                width: var(--sidebar-width);
+                height: 100vh;
+                background: rgba(28, 28, 28, 0.95);
+                backdrop-filter: blur(10px);
+                border-left: 0.125rem solid rgba(255, 255, 255, 0.15);
+                transition: right 0.3s ease;
+                z-index: 1000;
+                overflow-y: auto;
+                padding: 2rem 1.5rem;
+            }
+            
+            .sidebar.open {
+                right: 0;
+            }
+            
+            .sidebar-toggle {
+                position: fixed;
+                top: 50%;
+                right: 10px;
+                transform: translateY(-50%);
+                background: var(--orange-color);
+                border: none;
+                color: white;
+                padding: 1rem 0.5rem;
+                border-radius: 0.5rem 0 0 0.5rem;
+                cursor: pointer;
+                z-index: 999;
+                font-size: 1.2rem;
+                transition: all 0.3s ease;
+                display: none; /* Hidden by default, shown when logged in */
+            }
+            
+            .sidebar-toggle:hover {
+                background: rgba(240, 94, 28, 0.8);
+                padding-left: 0.8rem;
+            }
+            
+            .sidebar-toggle.sidebar-open {
+                right: calc(var(--sidebar-width) + 10px);
+                border-radius: 0.5rem 0 0 0.5rem;
+            }
+            
+            .sidebar h3 {
+                color: var(--orange-color);
+                margin-bottom: 1.5rem;
+                text-align: center;
+                font-size: 1.2rem;
+            }
+            
+            .entry-list {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .entry-item {
+                background: rgba(255, 255, 255, 0.05);
+                border: 0.125rem solid rgba(255, 255, 255, 0.1);
+                border-radius: 0.5rem;
+                padding: 1rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                position: relative;
+            }
+            
+            .entry-item:hover {
+                background: rgba(255, 255, 255, 0.1);
+                border-color: var(--orange-color);
+            }
+            
+            .entry-item.active {
+                background: rgba(240, 94, 28, 0.1);
+                border-color: var(--orange-color);
+            }
+            
+            .entry-preview {
+                margin: 0;
+                font-size: 0.9rem;
+                color: var(--primary-link-color);
+            }
+            
+            .entry-title {
+                font-weight: bold;
+                color: var(--orange-color);
+                margin-bottom: 0.5rem;
+                font-size: 1rem;
+            }
+            
+            .entry-date {
+                font-size: 0.8rem;
+                color: rgba(255, 255, 252, 0.5);
+                margin-bottom: 0.5rem;
+            }
+            
+            .entry-content-preview {
+                font-size: 0.85rem;
+                opacity: 0.8;
+                overflow: hidden;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+            }
+            
+            .entry-delete {
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(255, 107, 107, 0.8);
+                color: white;
+                border: none;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                cursor: pointer;
+                font-size: 0.8rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+            }
+            
+            .entry-item:hover .entry-delete {
+                opacity: 1;
+            }
+            
+            .entry-delete:hover {
+                background: #ff6b6b;
+            }
+            
+            /* Entry Viewer */
+            .entry-viewer {
+                display: none;
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 0.5rem;
+                padding: 2rem;
+                margin-top: 2rem;
+                border: 0.125rem solid rgba(255, 255, 255, 0.15);
+            }
+            
+            .entry-viewer.active {
+                display: block;
+            }
+            
+            .entry-viewer h3 {
+                color: var(--orange-color);
+                margin-bottom: 1rem;
+            }
+            
+            .entry-viewer .entry-meta {
+                color: var(--primary-link-color);
+                font-size: 0.9rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .entry-viewer .entry-content {
+                white-space: pre-wrap;
+                line-height: 1.6;
+            }
+            
+            .close-viewer {
+                background: var(--orange-color);
+                color: white;
+                border: none;
+                padding: 0.5rem 1rem;
+                border-radius: 0.25rem;
+                cursor: pointer;
+                margin-bottom: 1rem;
+                font-size: 0.9rem;
+            }
+            
+            .close-viewer:hover {
+                background: rgba(240, 94, 28, 0.8);
+            }
+            
             h1, h2 {
                 text-align: center;
                 color: var(--orange-color);
@@ -125,10 +322,8 @@ async function handleRequest(request, env) {
                 color: var(--primary-font-color);
                 font-family: inherit;
                 transition: all 0.125s ease-in-out;
-                box-sizing: border-box;
             }
             
-            /* Fix dropdown styling */
             select {
                 background-color: var(--primary-background-color);
                 border: 0.125rem solid rgba(255, 255, 255, 0.25);
@@ -177,14 +372,31 @@ async function handleRequest(request, env) {
                 background-color: rgba(81, 207, 102, 0.1);
                 border: 0.125rem solid rgba(81, 207, 102, 0.3);
             }
-            #journal-entries h4 { color: var(--orange-color); }
-            #journal-entries p { white-space: pre-wrap; }
             a { color: var(--orange-color); text-decoration: none; }
             a:hover { text-decoration: underline; }
+            
+            /* Mobile Responsiveness */
+            @media (max-width: 768px) {
+                :root {
+                    --sidebar-width: 100vw;
+                }
+                
+                main.sidebar-open {
+                    margin-right: 0;
+                }
+                
+                .sidebar-toggle.sidebar-open {
+                    right: 10px;
+                }
+                
+                .journal-container {
+                    padding: 1.5rem;
+                }
+            }
         </style>
     </head>
     <body>
-        <main>
+        <main id="main-content">
             <div class="journal-container">
                 <h1>Private Journal</h1>
                 <div id="auth-section">
@@ -211,10 +423,31 @@ async function handleRequest(request, env) {
                     <div class="input-group"><label for="journal-entry">Journal Entry:</label><textarea id="journal-entry" placeholder="Write your thoughts here..."></textarea></div>
                     <div style="text-align: center;"><button id="save-btn" class="btn">Save to Cloud</button><button id="logout-btn" class="btn btn-secondary">Logout</button></div>
                     <div id="save-status" style="display: none;"></div>
-                    <div id="journal-entries"></div>
+                    
+                    <!-- Entry Viewer -->
+                    <div id="entry-viewer" class="entry-viewer">
+                        <button class="close-viewer" id="close-viewer">← Back to New Entry</button>
+                        <h3 id="viewer-title">Entry Title</h3>
+                        <div class="entry-meta" id="viewer-meta">Date information</div>
+                        <div class="entry-content" id="viewer-content">Entry content will appear here...</div>
+                    </div>
                 </div>
             </div>
         </main>
+        
+        <!-- Sidebar Toggle Button -->
+        <button class="sidebar-toggle" id="sidebar-toggle">
+            <span id="toggle-icon">→</span>
+        </button>
+        
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <h3>Your Journal Entries</h3>
+            <div class="entry-list" id="entry-list">
+                <p style="text-align: center; color: var(--primary-link-color); font-size: 0.9rem;">Loading entries...</p>
+            </div>
+        </div>
+        
         <script>
             const apiUrl = '${apiUrl}';
 
@@ -232,15 +465,102 @@ async function handleRequest(request, env) {
             const fontSelector = document.getElementById('font-selector');
             const journalEntryTextarea = document.getElementById('journal-entry');
             const welcomeMessage = document.getElementById('welcome-message');
+            
+            // Sidebar Elements
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            const toggleIcon = document.getElementById('toggle-icon');
+            const entryList = document.getElementById('entry-list');
+            
+            // Entry Viewer Elements
+            const entryViewer = document.getElementById('entry-viewer');
+            const viewerTitle = document.getElementById('viewer-title');
+            const viewerMeta = document.getElementById('viewer-meta');
+            const viewerContent = document.getElementById('viewer-content');
+            const closeViewer = document.getElementById('close-viewer');
+
+            let currentEntries = [];
+            let activeEntryId = null;
 
             // Event Listeners
             showRegister.addEventListener('click', e => { e.preventDefault(); loginForm.style.display = 'none'; registerForm.style.display = 'block'; });
             showLogin.addEventListener('click', e => { e.preventDefault(); registerForm.style.display = 'none'; loginForm.style.display = 'block'; });
             fontSelector.addEventListener('change', e => { journalEntryTextarea.style.fontFamily = e.target.value; });
 
+            // Sidebar Event Listeners
+            sidebarToggle.addEventListener('click', toggleSidebar);
+            closeViewer.addEventListener('click', closeEntryViewer);
+
             // Add Enter key support for forms
             document.getElementById('login-password').addEventListener('keypress', e => { if (e.key === 'Enter') loginBtn.click(); });
             document.getElementById('register-password').addEventListener('keypress', e => { if (e.key === 'Enter') registerBtn.click(); });
+
+            // Sidebar Functions
+            function toggleSidebar() {
+                const isOpen = sidebar.classList.contains('open');
+                if (isOpen) {
+                    sidebar.classList.remove('open');
+                    mainContent.classList.remove('sidebar-open');
+                    sidebarToggle.classList.remove('sidebar-open');
+                    toggleIcon.textContent = '→';
+                } else {
+                    sidebar.classList.add('open');
+                    mainContent.classList.add('sidebar-open');
+                    sidebarToggle.classList.add('sidebar-open');
+                    toggleIcon.textContent = '←';
+                    loadEntries(); // Refresh entries when opening
+                }
+            }
+
+            function showEntryInViewer(entry) {
+                activeEntryId = entry.timestamp;
+                viewerTitle.textContent = entry.title || 'Untitled Entry';
+                viewerMeta.textContent = new Date(entry.timestamp).toLocaleString();
+                viewerContent.textContent = entry.content;
+                entryViewer.classList.add('active');
+                
+                // Update active state in sidebar
+                document.querySelectorAll('.entry-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                document.querySelector(\`[data-entry-id="\${entry.timestamp}"]\`)?.classList.add('active');
+            }
+
+            function closeEntryViewer() {
+                entryViewer.classList.remove('active');
+                activeEntryId = null;
+                document.querySelectorAll('.entry-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+            }
+
+            async function deleteEntry(timestamp) {
+                if (!confirm('Are you sure you want to delete this entry? This action cannot be undone.')) {
+                    return;
+                }
+                
+                const token = localStorage.getItem('journal_token');
+                const { response, data } = await makeApiCall(\`/entries/\${timestamp}\`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': \`Bearer \${token}\` }
+                });
+                
+                if (response.ok) {
+                    showStatus('Entry deleted successfully!', 'success');
+                    if (activeEntryId === timestamp) {
+                        closeEntryViewer();
+                    }
+                    await loadEntries();
+                } else {
+                    if (response.status === 401) {
+                        showStatus('Session expired. Please log in again.', 'error');
+                        logoutBtn.click();
+                    } else {
+                        showStatus(data.error || 'Failed to delete entry.', 'error');
+                    }
+                }
+            }
 
             // Hashing function
             async function hashPassword(password) {
@@ -356,6 +676,10 @@ async function handleRequest(request, env) {
                 localStorage.removeItem('journal_user'); 
                 authSection.style.display = 'block'; 
                 journalSection.style.display = 'none'; 
+                sidebarToggle.style.display = 'none';
+                sidebar.classList.remove('open');
+                mainContent.classList.remove('sidebar-open');
+                closeEntryViewer();
                 // Clear forms
                 document.getElementById('login-username').value = '';
                 document.getElementById('login-password').value = '';
@@ -384,6 +708,7 @@ async function handleRequest(request, env) {
                     showStatus('Entry saved successfully!', 'success');
                     document.getElementById('entry-title').value = '';
                     journalEntryTextarea.value = '';
+                    closeEntryViewer();
                     await loadEntries();
                 } else {
                     if (response.status === 401) {
@@ -405,36 +730,63 @@ async function handleRequest(request, env) {
                 });
                 
                 if (response.ok) {
-                    const entries = data;
-                    const entriesDiv = document.getElementById('journal-entries');
-                    entriesDiv.innerHTML = '<h3>Your Entries:</h3>';
-                    
-                    if (entries.length > 0) {
-                        entries.forEach(entry => {
-                            const entryEl = document.createElement('div');
-                            const safeTitle = (entry.title || 'Untitled').replace(/[<>&"']/g, c => ({
-                                '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;'
-                            }[c]));
-                            const safeContent = entry.content.replace(/[<>&"']/g, c => ({
-                                '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;'
-                            }[c]));
-                            entryEl.innerHTML = \`<h4>\${safeTitle}</h4><p>\${safeContent}</p><hr>\`;
-                            entriesDiv.appendChild(entryEl);
-                        });
-                    } else { 
-                        entriesDiv.innerHTML += '<p>No entries found. Start writing your first entry!</p>'; 
-                    }
+                    currentEntries = data;
+                    renderEntryList();
                 } else if (response.status === 401) {
                     showStatus('Session expired. Please log in again.', 'error');
                     logoutBtn.click();
                 }
             }
             
+            function renderEntryList() {
+                if (currentEntries.length === 0) {
+                    entryList.innerHTML = '<p style="text-align: center; color: var(--primary-link-color); font-size: 0.9rem;">No entries found. Start writing your first entry!</p>';
+                    return;
+                }
+                
+                const entriesHtml = currentEntries.map(entry => {
+                    const date = new Date(entry.timestamp).toLocaleDateString();
+                    const title = entry.title || 'Untitled Entry';
+                    const preview = entry.content.substring(0, 80) + (entry.content.length > 80 ? '...' : '');
+                    
+                    return \`
+                        <div class="entry-item" data-entry-id="\${entry.timestamp}">
+                            <button class="entry-delete" onclick="deleteEntry(\${entry.timestamp})" title="Delete entry">×</button>
+                            <div class="entry-title">\${escapeHtml(title)}</div>
+                            <div class="entry-date">\${date}</div>
+                            <div class="entry-content-preview">\${escapeHtml(preview)}</div>
+                        </div>
+                    \`;
+                }).join('');
+                
+                entryList.innerHTML = entriesHtml;
+                
+                // Add click listeners to entry items
+                document.querySelectorAll('.entry-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        if (e.target.classList.contains('entry-delete')) return; // Don't open if delete button clicked
+                        
+                        const entryId = parseInt(item.dataset.entryId);
+                        const entry = currentEntries.find(e => e.timestamp === entryId);
+                        if (entry) {
+                            showEntryInViewer(entry);
+                        }
+                    });
+                });
+            }
+            
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
             // UI View Management
             function showJournalView() { 
                 authSection.style.display = 'none'; 
                 journalSection.style.display = 'block'; 
-                welcomeMessage.textContent = \`Welcome, \${localStorage.getItem('journal_user')}!\`; 
+                sidebarToggle.style.display = 'block';
+                welcomeMessage.textContent = `Welcome, ${localStorage.getItem('journal_user')}!`; 
                 loadEntries(); 
             }
             
@@ -796,6 +1148,103 @@ async function handleGetEntries(request, env) {
         });
     } catch (e) {
         console.error('Get entries error:', e);
+        return new Response(JSON.stringify({ error: 'Internal server error' }), { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+    }
+}
+
+// API endpoint to delete a journal entry.
+async function handleDeleteEntry(request, env) {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return new Response(JSON.stringify({ error: 'Unauthorized - No token provided' }), { 
+            status: 401, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+    }
+
+    try {
+        const token = authHeader.substring(7);
+        
+        if (!env.JWT_SECRET) {
+            console.error('JWT_SECRET not configured');
+            return new Response(JSON.stringify({ error: 'Server configuration error' }), { 
+                status: 500, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+        }
+
+        let payload;
+        try {
+            const isValid = await verify(token, env.JWT_SECRET);
+            
+            if (!isValid) {
+                return new Response(JSON.stringify({ error: 'Invalid token' }), { 
+                    status: 401, 
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+                });
+            }
+            
+            const parts = token.split('.');
+            if (parts.length !== 3) {
+                return new Response(JSON.stringify({ error: 'Invalid token format' }), { 
+                    status: 401, 
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+                });
+            }
+            
+            const payloadB64 = parts[1];
+            const payloadJson = atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/'));
+            payload = JSON.parse(payloadJson);
+            
+        } catch (verifyError) {
+            console.error('JWT verify error (delete entry):', verifyError);
+            return new Response(JSON.stringify({ error: 'Invalid or expired token' }), { 
+                status: 401, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+        }
+
+        if (!payload || !payload.username) {
+            return new Response(JSON.stringify({ error: 'Invalid token payload' }), { 
+                status: 401, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+        }
+
+        // Extract timestamp from URL
+        const url = new URL(request.url);
+        const timestamp = url.pathname.split('/entries/')[1];
+        
+        if (!timestamp) {
+            return new Response(JSON.stringify({ error: 'Entry timestamp required' }), { 
+                status: 400, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+        }
+
+        const entryKey = `entry:${payload.username}:${timestamp}`;
+        
+        // Check if entry exists
+        const existingEntry = await env.JOURNAL_KV.get(entryKey);
+        if (!existingEntry) {
+            return new Response(JSON.stringify({ error: 'Entry not found' }), { 
+                status: 404, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+        }
+
+        // Delete the entry
+        await env.JOURNAL_KV.delete(entryKey);
+        
+        return new Response(JSON.stringify({ success: true }), { 
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+    } catch (e) {
+        console.error('Delete entry error:', e);
         return new Response(JSON.stringify({ error: 'Internal server error' }), { 
             status: 500, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
