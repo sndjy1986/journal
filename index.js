@@ -1,4 +1,4 @@
-// CORRECTED: Imported Router from the new local library file
+// CORRECTED: Importing the router from the local library file to resolve module errors.
 import { Router } from './lib/itty-router.js';
 import { handleLogin, handleRegister } from './handlers/auth.js';
 import { handleGetEntries, handleSaveEntry, handleDeleteEntry } from './handlers/entries.js';
