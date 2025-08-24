@@ -8,8 +8,5 @@
   },
   "devDependencies": {
     "wrangler": "^3.0.0"
-  },
-  "dependencies": {
-    "@tsndr/cloudflare-worker-jwt": "^2.2.1"
   }
 }
