@@ -264,4 +264,128 @@ async function handleRequest(request, env) {
             logoutBtn.addEventListener('click', () => { localStorage.removeItem('journal_token'); localStorage.removeItem('journal_user'); authSection.style.display = 'block'; journalSection.style.display = 'none'; });
             
             // Save Entry Function
-            saveBtn.addEventListener('click', async ().
+            saveBtn.addEventListener('click', async () => {
+                const title = document.getElementById('entry-title').value;
+                const content = journalEntryTextarea.value;
+                const token = localStorage.getItem('journal_token');
+                if (!content) {
+                    showStatus('Please write something before saving.', 'error');
+                    return;
+                }
+                const response = await fetch(\`\${apiUrl}/entries\`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${token}\` },
+                    body: JSON.stringify({ title, content })
+                });
+                if (response.ok) {
+                    showStatus('Entry saved successfully!', 'success');
+                    document.getElementById('entry-title').value = '';
+                    journalEntryTextarea.value = '';
+                    loadEntries();
+                } else {
+                    showStatus('Failed to save entry.', 'error');
+                }
+            });
+            
+            // Load Entries Function
+            async function loadEntries() {
+                const token = localStorage.getItem('journal_token');
+                const response = await fetch(\`\${apiUrl}/entries\`, { headers: { 'Authorization': \`Bearer \${token}\` } });
+                if (response.ok) {
+                    const entries = await response.json();
+                    const entriesDiv = document.getElementById('journal-entries');
+                    entriesDiv.innerHTML = '<h3>Your Entries:</h3>';
+                    if (entries.length > 0) {
+                        entries.forEach(entry => {
+                            const entryEl = document.createElement('div');
+                            entryEl.innerHTML = \`<h4>\${entry.title || 'Untitled'}</h4><p>\${entry.content}</p><hr>\`;
+                            entriesDiv.appendChild(entryEl);
+                        });
+                    } else { entriesDiv.innerHTML += '<p>No entries found.</p>'; }
+                }
+            }
+            
+            // UI View Management
+            function showJournalView() { authSection.style.display = 'none'; journalSection.style.display = 'block'; welcomeMessage.textContent = \`Welcome, \${localStorage.getItem('journal_user')}!\`; loadEntries(); }
+            function showAuthError(message) { const el = document.getElementById('auth-error'); el.textContent = message; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 5000); }
+            function showStatus(message, type) { const el = document.getElementById('save-status'); el.textContent = message; el.className = type === 'success' ? 'success-message' : 'error-message'; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 5000); }
+            
+            // Initial check on page load
+            if (localStorage.getItem('journal_token')) { showJournalView(); }
+        </script>
+    </body>
+    </html>
+    `;
+    return new Response(html, {
+        headers: { 'Content-Type': 'text/html;charset=UTF-8' },
+    });
+}
+
+// API endpoint to handle user registration.
+async function handleRegister(request, env) {
+    try {
+        const { username, password } = await request.json();
+        if (!username || !password) {
+            return new Response(JSON.stringify({ error: 'Username and password are required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const userKey = \`user:\${username}\`;
+        if (await env.JOURNAL_KV.get(userKey)) {
+            return new Response(JSON.stringify({ error: 'Username already taken' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        await env.JOURNAL_KV.put(userKey, password);
+        return new Response(JSON.stringify({ success: true }), { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+}
+
+// API endpoint to handle user login and issue a JWT.
+async function handleLogin(request, env) {
+    try {
+        const { username, password } = await request.json();
+        const storedPassword = await env.JOURNAL_KV.get(\`user:\${username}\`);
+        if (!storedPassword || storedPassword !== password) {
+            return new Response(JSON.stringify({ error: 'Invalid credentials' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const secret = env.JWT_SECRET;
+        if (!secret) throw new Error('JWT_SECRET not configured in worker secrets');
+        const token = await sign({ username, exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) }, secret);
+        return new Response(JSON.stringify({ token }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+}
+
+// API endpoint to save a new journal entry.
+async function handleSaveEntry(request, env) {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    try {
+        const { payload } = await verify(authHeader.substring(7), env.JWT_SECRET);
+        const { title, content } = await request.json();
+        const entryKey = \`entry:\${payload.username}:\${Date.now()}\`;
+        await env.JOURNAL_KV.put(entryKey, JSON.stringify({ title, content }));
+        return new Response(JSON.stringify({ success: true }), { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } catch (e) {
+        return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+}
+
+// API endpoint to retrieve all journal entries for a user.
+async function handleGetEntries(request, env) {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    try {
+        const { payload } = await verify(authHeader.substring(7), env.JWT_SECRET);
+        const list = await env.JOURNAL_KV.list({ prefix: \`entry:\${payload.username}:\` });
+        const promises = list.keys.map(key => env.JOURNAL_KV.get(key.name).then(value => JSON.parse(value)));
+        const entries = await Promise.all(promises);
+        return new Response(JSON.stringify(entries.reverse()), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } catch (e) {
+        return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+}
