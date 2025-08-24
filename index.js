@@ -324,6 +324,7 @@ async function handleRequest(request, env) {
                 });
                 
                 if (response.ok) { 
+                    console.log('Login successful, token received:', data.token ? 'Yes' : 'No');
                     localStorage.setItem('journal_token', data.token); 
                     localStorage.setItem('journal_user', username); 
                     showJournalView(); 
@@ -592,13 +593,17 @@ async function handleSaveEntry(request, env) {
         let payload;
         try {
             const verifyResult = await verify(token, env.JWT_SECRET);
-            if (!verifyResult) {
+            console.log('JWT verify result:', verifyResult);
+            
+            if (!verifyResult || !verifyResult.payload) {
+                console.log('JWT verification failed - no result or payload');
                 return new Response(JSON.stringify({ error: 'Invalid token' }), { 
                     status: 401, 
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
                 });
             }
             payload = verifyResult.payload;
+            console.log('JWT payload:', payload);
         } catch (verifyError) {
             console.error('JWT verify error:', verifyError);
             return new Response(JSON.stringify({ error: 'Invalid or expired token' }), { 
@@ -608,6 +613,7 @@ async function handleSaveEntry(request, env) {
         }
 
         if (!payload || !payload.username) {
+            console.log('Invalid payload structure:', payload);
             return new Response(JSON.stringify({ error: 'Invalid token payload' }), { 
                 status: 401, 
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -671,15 +677,19 @@ async function handleGetEntries(request, env) {
         let payload;
         try {
             const verifyResult = await verify(token, env.JWT_SECRET);
-            if (!verifyResult) {
+            console.log('JWT verify result (get entries):', verifyResult);
+            
+            if (!verifyResult || !verifyResult.payload) {
+                console.log('JWT verification failed - no result or payload (get entries)');
                 return new Response(JSON.stringify({ error: 'Invalid token' }), { 
                     status: 401, 
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
                 });
             }
             payload = verifyResult.payload;
+            console.log('JWT payload (get entries):', payload);
         } catch (verifyError) {
-            console.error('JWT verify error:', verifyError);
+            console.error('JWT verify error (get entries):', verifyError);
             return new Response(JSON.stringify({ error: 'Invalid or expired token' }), { 
                 status: 401, 
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -687,6 +697,7 @@ async function handleGetEntries(request, env) {
         }
 
         if (!payload || !payload.username) {
+            console.log('Invalid payload structure:', payload);
             return new Response(JSON.stringify({ error: 'Invalid token payload' }), { 
                 status: 401, 
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
