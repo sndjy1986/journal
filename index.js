@@ -1,7 +1,8 @@
 import { Router } from 'itty-router';
-import { handleLogin, handleRegister } from './handlers/auth';
-import { handleGetEntries, handleSaveEntry, handleDeleteEntry } from './handlers/entries';
-import { handleStatic } from './handlers/static';
+// CORRECTED: Added .js extension to all handler imports
+import { handleLogin, handleRegister } from './handlers/auth.js';
+import { handleGetEntries, handleSaveEntry, handleDeleteEntry } from './handlers/entries.js';
+import { handleStatic } from './handlers/static.js';
 
 // Create a new router
 const router = Router();
