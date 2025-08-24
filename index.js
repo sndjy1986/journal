@@ -786,7 +786,7 @@ async function handleRequest(request, env) {
                 authSection.style.display = 'none'; 
                 journalSection.style.display = 'block'; 
                 sidebarToggle.style.display = 'block';
-                welcomeMessage.textContent = `Welcome, ${localStorage.getItem('journal_user')}!`; 
+                welcomeMessage.textContent = \`Welcome, \${localStorage.getItem('journal_user')}!\`; 
                 loadEntries(); 
             }
             
