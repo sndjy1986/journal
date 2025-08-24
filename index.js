@@ -1,6 +1,7 @@
 // Import handlers
 import { handleLogin, handleRegister } from './handlers/auth.js';
 import { handleGetEntries, handleSaveEntry, handleDeleteEntry } from './handlers/entries.js';
+import { handleStatic } from './handlers/static.js';
 
 // --- A Simple, Self-Contained Router ---
 const router = {
@@ -33,7 +34,12 @@ const router = {
         }
       }
     }
-    // Let Wrangler handle static assets if no API route matches
+    
+    // If no API route matches, serve the static HTML page
+    if (method === 'GET' && (pathname === '/' || pathname === '/index.html')) {
+      return handleStatic(request, ...args);
+    }
+    
     return new Response('Not Found', { status: 404 });
   }
 };
