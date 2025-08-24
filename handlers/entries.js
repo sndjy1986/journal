@@ -1,10 +1,10 @@
-// Base64 URL-safe decoding (same as in auth.js)
+// Base64 URL-safe decoding
 function base64UrlDecode(str) {
     str += '='.repeat((4 - str.length % 4) % 4);
     return atob(str.replace(/-/g, '+').replace(/_/g, '/'));
 }
 
-// Simple JWT verify function (same as in auth.js)
+// Simple JWT verify function
 async function verify(token, secret) {
     const parts = token.split('.');
     if (parts.length !== 3) return false;
