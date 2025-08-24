@@ -131,10 +131,12 @@ async function handleRequest(request, env) {
                 z-index: 1000;
                 overflow-y: auto;
                 padding: 2rem 1.5rem;
+                display: none; /* Hidden by default */
             }
             
             .sidebar.open {
                 right: 0;
+                display: block; /* Show when open */
             }
             
             .sidebar-toggle {
@@ -500,11 +502,13 @@ async function handleRequest(request, env) {
                 const isOpen = sidebar.classList.contains('open');
                 if (isOpen) {
                     sidebar.classList.remove('open');
-                    sidebarToggle.style.display = 'none'; // Hide button when closed
+                    sidebar.style.display = 'none';
+                    sidebarToggle.style.display = 'none';
                 } else {
+                    sidebar.style.display = 'block';
                     sidebar.classList.add('open');
                     sidebarToggle.classList.add('sidebar-open');
-                    sidebarToggle.style.display = 'block'; // Show button when open
+                    sidebarToggle.style.display = 'block';
                     toggleIcon.textContent = '←';
                     loadEntries(); // Refresh entries when opening
                 }
@@ -679,8 +683,9 @@ async function handleRequest(request, env) {
                 authSection.style.display = 'block'; 
                 journalSection.style.display = 'none'; 
                 
-                // Hide and reset sidebar completely
+                // Hide sidebar completely when logged out
                 sidebarToggle.style.display = 'none';
+                sidebar.style.display = 'none';
                 sidebar.classList.remove('open');
                 sidebarToggle.classList.remove('sidebar-open');
                 
@@ -802,9 +807,9 @@ async function handleRequest(request, env) {
             function showJournalView() { 
                 authSection.style.display = 'none'; 
                 journalSection.style.display = 'block'; 
-                // Show a small arrow to indicate sidebar is available
+                // Show toggle button to indicate sidebar is available
                 sidebarToggle.style.display = 'block';
-                sidebarToggle.innerHTML = '<span id="toggle-icon">→</span>';
+                toggleIcon.textContent = '→';
                 welcomeMessage.textContent = \`Welcome, \${localStorage.getItem('journal_user')}!\`; 
                 loadEntries(); 
             }
