@@ -592,18 +592,41 @@ async function handleSaveEntry(request, env) {
 
         let payload;
         try {
-            const verifyResult = await verify(token, env.JWT_SECRET);
-            console.log('JWT verify result:', verifyResult);
+            // Try direct verification first
+            const isValid = await verify(token, env.JWT_SECRET);
+            console.log('JWT verification result:', isValid);
             
-            if (!verifyResult || !verifyResult.payload) {
-                console.log('JWT verification failed - no result or payload');
+            if (!isValid) {
+                console.log('JWT verification failed');
                 return new Response(JSON.stringify({ error: 'Invalid token' }), { 
                     status: 401, 
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
                 });
             }
-            payload = verifyResult.payload;
-            console.log('JWT payload:', payload);
+            
+            // If verification passes, decode the payload manually
+            const parts = token.split('.');
+            if (parts.length !== 3) {
+                console.log('Invalid token format');
+                return new Response(JSON.stringify({ error: 'Invalid token format' }), { 
+                    status: 401, 
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+                });
+            }
+            
+            try {
+                const payloadB64 = parts[1];
+                const payloadJson = atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/'));
+                payload = JSON.parse(payloadJson);
+                console.log('Decoded JWT payload:', payload);
+            } catch (decodeError) {
+                console.error('Failed to decode JWT payload:', decodeError);
+                return new Response(JSON.stringify({ error: 'Invalid token payload' }), { 
+                    status: 401, 
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+                });
+            }
+            
         } catch (verifyError) {
             console.error('JWT verify error:', verifyError);
             return new Response(JSON.stringify({ error: 'Invalid or expired token' }), { 
@@ -676,18 +699,41 @@ async function handleGetEntries(request, env) {
 
         let payload;
         try {
-            const verifyResult = await verify(token, env.JWT_SECRET);
-            console.log('JWT verify result (get entries):', verifyResult);
+            // Try direct verification first
+            const isValid = await verify(token, env.JWT_SECRET);
+            console.log('JWT verification result (get entries):', isValid);
             
-            if (!verifyResult || !verifyResult.payload) {
-                console.log('JWT verification failed - no result or payload (get entries)');
+            if (!isValid) {
+                console.log('JWT verification failed (get entries)');
                 return new Response(JSON.stringify({ error: 'Invalid token' }), { 
                     status: 401, 
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
                 });
             }
-            payload = verifyResult.payload;
-            console.log('JWT payload (get entries):', payload);
+            
+            // If verification passes, decode the payload manually
+            const parts = token.split('.');
+            if (parts.length !== 3) {
+                console.log('Invalid token format (get entries)');
+                return new Response(JSON.stringify({ error: 'Invalid token format' }), { 
+                    status: 401, 
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+                });
+            }
+            
+            try {
+                const payloadB64 = parts[1];
+                const payloadJson = atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/'));
+                payload = JSON.parse(payloadJson);
+                console.log('Decoded JWT payload (get entries):', payload);
+            } catch (decodeError) {
+                console.error('Failed to decode JWT payload (get entries):', decodeError);
+                return new Response(JSON.stringify({ error: 'Invalid token payload' }), { 
+                    status: 401, 
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+                });
+            }
+            
         } catch (verifyError) {
             console.error('JWT verify error (get entries):', verifyError);
             return new Response(JSON.stringify({ error: 'Invalid or expired token' }), { 
