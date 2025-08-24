@@ -12,3 +12,9 @@ binding = "JOURNAL_KV"
 id = "6964a75e1e7c4c548babade1b8cfc723"
 # You still need to get the preview_id from your dashboard for local development
 preview_id = "YOUR_PREVIEW_ID_HERE"
+# wrangler.toml (wrangler v3.88.0^)
+[observability.logs]
+enabled = true
+
+
+
