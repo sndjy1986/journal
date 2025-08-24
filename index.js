@@ -101,12 +101,10 @@ async function handleRequest(request, env) {
                 align-items: center;
                 min-height: 100vh;
                 padding: 2rem 1rem;
-                transition: margin-right 0.3s ease;
+                /* Removed transition - main content stays fixed */
             }
             
-            main.sidebar-open {
-                margin-right: var(--sidebar-width);
-            }
+            /* Removed main.sidebar-open class - no longer needed */
             
             .journal-container {
                 background: rgba(255, 255, 255, 0.05);
@@ -379,10 +377,6 @@ async function handleRequest(request, env) {
             @media (max-width: 768px) {
                 :root {
                     --sidebar-width: 100vw;
-                }
-                
-                main.sidebar-open {
-                    margin-right: 0;
                 }
                 
                 .sidebar-toggle.sidebar-open {
