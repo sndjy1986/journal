@@ -328,7 +328,7 @@ async function handleRegister(request, env) {
         if (!username || !password) {
             return new Response(JSON.stringify({ error: 'Username and password are required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
-        const userKey = \`user:\${username}\`;
+        const userKey = \user:\${username}\`;
         if (await env.JOURNAL_KV.get(userKey)) {
             return new Response(JSON.stringify({ error: 'Username already taken' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
