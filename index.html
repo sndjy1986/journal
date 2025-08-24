@@ -1,284 +1,83 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-    <link rel="stylesheet" href="css/main.css">
-    <title>Joey's Homepage - Private Journal</title>
+<script>
+    // Make sure this URL is correct!
+    const apiUrl = 'YOUR_WORKER_URL'; // Replace with your Cloudflare Worker URL
 
-<style>
-    /* Import your existing variables and styling */
-    @import url('https://fonts.googleapis.com/css2?family=Fira+Code&family=Roboto+Mono&family=Lora&display=swap');
+    // --- (all your DOM element variables are the same) ---
+    const authSection = document.getElementById('auth-section');
+    const journalSection = document.getElementById('journal-section');
+    const loginForm = document.getElementById('login-form');
+    //...(rest of them)...
+    
+    //...(all other functions are the same)...
 
-    body {
-        margin: 0;
-        padding-top: 50px;
-        transition: padding-top 0.3s ease;
-        background-color: var(--primary-background-color, #1C1C1C);
-        color: var(--primary-font-color, #FFFFFC);
-        font-family: "Fira Code", ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
-        font-size: 1rem;
-        line-height: 1.5;
-    }
-
-    /* ... (rest of your CSS is the same) ... */
-
-</style>
-</head>
-<body>
-    <main>
-        <div class="journal-container">
-            <a href="index.html" class="home-link">← Home</a>
-
-            <h1>Private Journal</h1>
-
-            <div id="auth-section">
-                <div id="login-form">
-                    <h2>Login</h2>
-                    <div class="input-group">
-                        <label for="login-username">Username:</label>
-                        <input type="text" id="login-username" placeholder="Your username">
-                    </div>
-                    <div class="input-group">
-                        <label for="login-password">Password:</label>
-                        <input type="password" id="login-password" placeholder="Your password">
-                    </div>
-                    <button id="login-btn" class="btn">Login</button>
-                    <p>Don't have an account? <a href="#" id="show-register">Register here</a>.</p>
-                </div>
-
-                <div id="register-form" style="display: none;">
-                    <h2>Register</h2>
-                    <div class="input-group">
-                        <label for="register-username">Username:</label>
-                        <input type="text" id="register-username" placeholder="Choose a username">
-                    </div>
-                    <div class="input-group">
-                        <label for="register-password">Password:</label>
-                        <input type="password" id="register-password" placeholder="Choose a password">
-                    </div>
-                    <button id="register-btn" class="btn">Register</button>
-                    <p>Already have an account? <a href="#" id="show-login">Login here</a>.</p>
-                </div>
-                <div id="auth-error" class="error-message" style="display: none;"></div>
-            </div>
-
-
-            <div id="journal-section" style="display: none;">
-                 <h2 id="welcome-message"></h2>
-                <div class="input-group">
-                    <label for="font-selector">Choose a font:</label>
-                    <select id="font-selector">
-                        <option value="'Fira Code', monospace">Fira Code</option>
-                        <option value="'Roboto Mono', monospace">Roboto Mono</option>
-                        <option value="'Lora', serif">Lora</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label for="entry-title">Entry Title (optional):</label>
-                    <input type="text" id="entry-title" placeholder="Today's thoughts...">
-                </div>
-
-                <div class="input-group">
-                    <label for="journal-entry">Journal Entry:</label>
-                    <textarea id="journal-entry" placeholder="Write your thoughts here..."></textarea>
-                </div>
-
-                <div style="text-align: center;">
-                    <button id="save-btn" class="btn">Save to Cloud</button>
-                    <button id="clear-btn" class="btn btn-secondary">Clear Entry</button>
-                    <button id="logout-btn" class="btn btn-secondary">Logout</button>
-                </div>
-                 <div id="save-status" style="display: none;"></div>
-                 <div id="journal-entries"></div>
-            </div>
-        </div>
-    </main>
-    <script>
-        const apiUrl = 'YOUR_WORKER_URL'; // Replace with your Cloudflare Worker URL
-
-        // DOM Elements
-        const authSection = document.getElementById('auth-section');
-        const journalSection = document.getElementById('journal-section');
-        const loginForm = document.getElementById('login-form');
-        const registerForm = document.getElementById('register-form');
-        const showRegister = document.getElementById('show-register');
-        const showLogin = document.getElementById('show-login');
-        const loginBtn = document.getElementById('login-btn');
-        const registerBtn = document.getElementById('register-btn');
-        const logoutBtn = document.getElementById('logout-btn');
-        const saveBtn = document.getElementById('save-btn');
-        const clearBtn = document.getElementById('clear-btn');
-        const fontSelector = document.getElementById('font-selector');
-        const journalEntryTextarea = document.getElementById('journal-entry');
-        const welcomeMessage = document.getElementById('welcome-message');
-
-        // Toggle between login and register forms
-        showRegister.addEventListener('click', (e) => {
-            e.preventDefault();
-            loginForm.style.display = 'none';
-            registerForm.style.display = 'block';
-        });
-
-        showLogin.addEventListener('click', (e) => {
-            e.preventDefault();
-            registerForm.style.display = 'none';
-            loginForm.style.display = 'block';
-        });
-
-        // Font selector
-        fontSelector.addEventListener('change', (e) => {
-            journalEntryTextarea.style.fontFamily = e.target.value;
-        });
-
-        // Hashing function (for client-side hashing before sending to server)
-        async function hashPassword(password) {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(password);
-            const hash = await crypto.subtle.digest('SHA-256', data);
-            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    // --- UPDATED Register Function ---
+    registerBtn.addEventListener('click', async () => {
+        const username = document.getElementById('register-username').value;
+        const password = document.getElementById('register-password').value;
+        console.log(`Attempting to register user: ${username}`); // Debug log
+        
+        if (!username || !password) {
+            showAuthError('Please enter a username and password.');
+            return;
         }
+        const hashedPassword = await hashPassword(password);
 
-        // Registration
-        registerBtn.addEventListener('click', async () => {
-            const username = document.getElementById('register-username').value;
-            const password = document.getElementById('register-password').value;
-            if (!username || !password) {
-                showAuthError('Please enter a username and password.');
-                return;
-            }
-            const hashedPassword = await hashPassword(password);
-
+        try {
             const response = await fetch(`${apiUrl}/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password: hashedPassword })
             });
 
+            const data = await response.json();
+            console.log('Registration response:', data); // Debug log
+
             if (response.ok) {
                 alert('Registration successful! Please log in.');
                 showLogin.click();
             } else {
-                const { error } = await response.json();
-                showAuthError(error);
+                showAuthError(data.error || 'Registration failed.');
             }
-        });
+        } catch (error) {
+            console.error('Registration fetch error:', error); // Error log
+            showAuthError('Could not connect to the server. Check the console for details.');
+        }
+    });
 
-        // Login
-        loginBtn.addEventListener('click', async () => {
-            const username = document.getElementById('login-username').value;
-            const password = document.getElementById('login-password').value;
-            if (!username || !password) {
-                showAuthError('Please enter a username and password.');
-                return;
-            }
-            const hashedPassword = await hashPassword(password);
+    // --- UPDATED Login Function ---
+    loginBtn.addEventListener('click', async () => {
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+        console.log(`Attempting to login user: ${username}`); // Debug log
 
+        if (!username || !password) {
+            showAuthError('Please enter a username and password.');
+            return;
+        }
+        const hashedPassword = await hashPassword(password);
+
+        try {
             const response = await fetch(`${apiUrl}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password: hashedPassword })
             });
+            
+            const data = await response.json();
+            console.log('Login response:', data); // Debug log
 
             if (response.ok) {
-                const { token } = await response.json();
-                localStorage.setItem('journal_token', token);
+                localStorage.setItem('journal_token', data.token);
                 localStorage.setItem('journal_user', username);
                 showJournalView();
             } else {
-                const { error } = await response.json();
-                showAuthError(error);
+                showAuthError(data.error || 'Login failed.');
             }
-        });
-        
-        // Logout
-        logoutBtn.addEventListener('click', () => {
-            localStorage.removeItem('journal_token');
-            localStorage.removeItem('journal_user');
-            authSection.style.display = 'block';
-            journalSection.style.display = 'none';
-        });
-        
-        // Save Entry
-        saveBtn.addEventListener('click', async () => {
-            const title = document.getElementById('entry-title').value;
-            const content = journalEntryTextarea.value;
-            const token = localStorage.getItem('journal_token');
-            if (!content) {
-                showStatus('Please write something before saving.', 'error');
-                return;
-            }
-            
-            const response = await fetch(`${apiUrl}/entries`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ title, content })
-            });
-
-            if (response.ok) {
-                showStatus('Entry saved successfully!', 'success');
-                document.getElementById('entry-title').value = '';
-                journalEntryTextarea.value = '';
-                loadEntries();
-            } else {
-                showStatus('Failed to save entry.', 'error');
-            }
-        });
-        
-        // Load Entries
-        async function loadEntries() {
-            const token = localStorage.getItem('journal_token');
-            const response = await fetch(`${apiUrl}/entries`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (response.ok) {
-                const entries = await response.json();
-                const entriesDiv = document.getElementById('journal-entries');
-                entriesDiv.innerHTML = '<h3>Your Entries:</h3>';
-                entries.forEach(entry => {
-                    const entryEl = document.createElement('div');
-                    entryEl.innerHTML = `<h4>${entry.title}</h4><p>${entry.content}</p><hr>`;
-                    entriesDiv.appendChild(entryEl);
-                });
-            }
+        } catch (error) {
+            console.error('Login fetch error:', error); // Error log
+            showAuthError('Could not connect to the server. Check the console for details.');
         }
-        
-        // UI Views
-        function showJournalView() {
-            authSection.style.display = 'none';
-            journalSection.style.display = 'block';
-            welcomeMessage.textContent = `Welcome, ${localStorage.getItem('journal_user')}!`;
-            loadEntries();
-        }
+    });
 
-        // Utility functions
-        function showAuthError(message) {
-            const errorEl = document.getElementById('auth-error');
-            errorEl.textContent = message;
-            errorEl.style.display = 'block';
-            setTimeout(() => { errorEl.style.display = 'none'; }, 5000);
-        }
-
-        function showStatus(message, type) {
-            const statusEl = document.getElementById('save-status');
-            statusEl.textContent = message;
-            statusEl.className = type === 'success' ? 'success-message' : 'error-message';
-            statusEl.style.display = 'block';
-            setTimeout(() => { statusEl.style.display = 'none'; }, 5000);
-        }
-        
-        // Check for existing token on page load
-        if (localStorage.getItem('journal_token')) {
-            showJournalView();
-        }
-
-    </script>
-</body>
-</html>
+    // --- (The rest of your script is the same) ---
+</script>
