@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-    <!-- Theme Toggle -->
     <button class="theme-toggle" id="theme-toggle" title="Toggle theme">🌙</button>
     
     <main id="main-content">
@@ -54,13 +53,11 @@
             <div id="journal-section" style="display: none;">
                 <h2 id="welcome-message"></h2>
                 
-                <!-- Writing Prompt -->
                 <div class="writing-prompt" id="writing-prompt-section">
                     <div class="prompt-text" id="prompt-text">What made you smile today?</div>
                     <button class="new-prompt-btn" id="new-prompt-btn">✨ New Prompt</button>
                 </div>
                 
-                <!-- Font Selector -->
                 <div class="input-group">
                     <label for="font-selector">Writing Font:</label>
                     <select id="font-selector">
@@ -71,7 +68,6 @@
                     </select>
                 </div>
                 
-                <!-- Mood Selector -->
                 <div class="mood-selector">
                     <label>How are you feeling?</label>
                     <div class="mood-options">
@@ -86,20 +82,17 @@
                     </div>
                 </div>
                 
-                <!-- Entry Title -->
                 <div class="input-group floating">
                     <input type="text" id="entry-title" placeholder=" ">
                     <label class="floating-label">Entry Title (optional)</label>
                 </div>
                 
-                <!-- Tags Input -->
                 <div class="input-group tags-input-container">
                     <label for="entry-tags">Tags (comma-separated):</label>
                     <input type="text" id="entry-tags" placeholder="work, personal, ideas, gratitude...">
                     <div class="tag-suggestions" id="tag-suggestions"></div>
                 </div>
                 
-                <!-- Editor Container -->
                 <div class="editor-container">
                     <div class="editor-toolbar">
                         <button class="tool-btn" data-tool="bold" title="Bold">**B**</button>
@@ -114,7 +107,6 @@
                     </div>
                 </div>
                 
-                <!-- Writing Stats -->
                 <div class="writing-stats" id="writing-stats">
                     <div class="stat-item">
                         <span class="stat-value" id="word-count">0</span>
@@ -130,7 +122,6 @@
                     </div>
                 </div>
                 
-                <!-- Action Buttons -->
                 <div style="text-align: center;">
                     <button id="save-btn" class="btn">💾 Save Entry</button>
                     <button id="export-btn" class="btn export-btn">📄 Export All</button>
@@ -139,7 +130,6 @@
                 
                 <div id="save-status" style="display: none;"></div>
                 
-                <!-- Entry Viewer -->
                 <div id="entry-viewer" class="entry-viewer">
                     <button class="close-viewer" id="close-viewer">← Back to Writing</button>
                     <h3 id="viewer-title">Entry Title</h3>
@@ -154,16 +144,13 @@
         </div>
     </main>
     
-    <!-- Sidebar Toggle Button -->
     <button class="sidebar-toggle" id="sidebar-toggle">
         <span id="toggle-icon">📖</span>
     </button>
     
-    <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <h3>📚 Your Journal</h3>
         
-        <!-- Sidebar Controls -->
         <div class="sidebar-controls">
             <input type="text" class="search-box" id="search-box" placeholder="🔍 Search entries...">
             <select class="filter-select" id="filter-select">
@@ -179,7 +166,6 @@
         </div>
     </div>
     
-    <!-- Export Modal -->
     <div class="modal-overlay" id="export-modal">
         <div class="modal">
             <h3>📄 Export Your Journal</h3>
