@@ -1,15 +1,10 @@
-// sndjy1986/journal/journal-main/view/script.js
 
-// API Configuration
-const apiUrl = ''; // The worker will be on the same domain, so this can be empty
-
-// Global variables
+const apiUrl = ''; 
 let currentEntries = [];
 let activeEntryId = null;
 let selectedMood = '';
 let currentUser = '';
 
-// Writing prompts
 const writingPrompts = [
     "What made you smile today?",
     "Describe a challenge you overcame recently",
@@ -28,14 +23,12 @@ const writingPrompts = [
     "What's something you're proud of accomplishing?"
 ];
 
-// Tag suggestions
 const commonTags = [
     'personal', 'work', 'family', 'friends', 'goals', 'gratitude',
     'memories', 'travel', 'health', 'creativity', 'learning',
     'relationships', 'achievements', 'challenges', 'ideas'
 ];
 
-// DOM Elements
 const authSection = document.getElementById('auth-section');
 const journalSection = document.getElementById('journal-section');
 const loginForm = document.getElementById('login-form');
@@ -52,7 +45,6 @@ const journalEntryTextarea = document.getElementById('journal-entry');
 const welcomeMessage = document.getElementById('welcome-message');
 const themeToggle = document.getElementById('theme-toggle');
 
-// Sidebar Elements
 const sidebarToggle = document.getElementById('sidebar-toggle');
 const sidebar = document.getElementById('sidebar');
 const toggleIcon = document.getElementById('toggle-icon');
@@ -60,7 +52,6 @@ const entryList = document.getElementById('entry-list');
 const searchBox = document.getElementById('search-box');
 const filterSelect = document.getElementById('filter-select');
 
-// Entry Viewer Elements
 const entryViewer = document.getElementById('entry-viewer');
 const viewerTitle = document.getElementById('viewer-title');
 const viewerMeta = document.getElementById('viewer-meta');
@@ -70,7 +61,6 @@ const viewerMood = document.getElementById('viewer-mood');
 const viewerTags = document.getElementById('viewer-tags');
 const closeViewer = document.getElementById('close-viewer');
 
-// Mood & Tools Elements
 const moodBtns = document.querySelectorAll('.mood-btn');
 const toolBtns = document.querySelectorAll('.tool-btn');
 const newPromptBtn = document.getElementById('new-prompt-btn');
@@ -78,18 +68,15 @@ const promptText = document.getElementById('prompt-text');
 const entryTags = document.getElementById('entry-tags');
 const tagSuggestions = document.getElementById('tag-suggestions');
 
-// Stats Elements
 const wordCount = document.getElementById('word-count');
 const charCount = document.getElementById('char-count');
 const readTime = document.getElementById('read-time');
 
-// Export Modal Elements
 const exportModal = document.getElementById('export-modal');
 const exportJsonBtn = document.getElementById('export-json');
 const exportTxtBtn = document.getElementById('export-txt');
 const cancelExportBtn = document.getElementById('cancel-export');
 
-// Initialize App
 document.addEventListener('DOMContentLoaded', initializeApp);
 
 function initializeApp() {
@@ -97,14 +84,12 @@ function initializeApp() {
     loadTheme();
     showRandomPrompt();
     
-    // Check if user is already logged in
     if (localStorage.getItem('journal_token')) {
         showJournalView();
     }
 }
 
 function setupEventListeners() {
-    // Auth Event Listeners
     showRegister.addEventListener('click', e => {
         e.preventDefault();
         loginForm.style.display = 'none';
@@ -123,49 +108,40 @@ function setupEventListeners() {
     saveBtn.addEventListener('click', handleSaveEntry);
     exportBtn.addEventListener('click', () => exportModal.classList.add('active'));
     
-    // Export Modal Listeners
     exportJsonBtn.addEventListener('click', () => exportEntries('json'));
     exportTxtBtn.addEventListener('click', () => exportEntries('txt'));
     cancelExportBtn.addEventListener('click', () => exportModal.classList.remove('active'));
     
-    // Theme Toggle
     themeToggle.addEventListener('click', toggleTheme);
     
-    // Font Selector
     fontSelector.addEventListener('change', e => {
         journalEntryTextarea.style.fontFamily = e.target.value;
     });
     
-    // Sidebar Event Listeners
     sidebarToggle.addEventListener('click', toggleSidebar);
     closeViewer.addEventListener('click', closeEntryViewer);
     searchBox.addEventListener('input', handleSearch);
     filterSelect.addEventListener('change', handleFilter);
     
-    // Mood Selection
     moodBtns.forEach(btn => {
         btn.addEventListener('click', () => selectMood(btn.dataset.mood));
     });
     
-    // Editor Tools
     toolBtns.forEach(btn => {
         btn.addEventListener('click', () => applyFormat(btn.dataset.tool));
     });
     
-    // Writing Prompt
     newPromptBtn.addEventListener('click', showRandomPrompt);
     
-    // Tags Input
+
     entryTags.addEventListener('input', handleTagInput);
     entryTags.addEventListener('focus', showTagSuggestions);
     entryTags.addEventListener('blur', () => {
         setTimeout(() => tagSuggestions.style.display = 'none', 200);
     });
     
-    // Writing Stats
     journalEntryTextarea.addEventListener('input', updateWritingStats);
     
-    // Enter key support
     document.getElementById('login-password').addEventListener('keypress', e => {
         if (e.key === 'Enter') loginBtn.click();
     });
@@ -173,7 +149,6 @@ function setupEventListeners() {
         if (e.key === 'Enter') registerBtn.click();
     });
     
-    // Close modal on outside click
     exportModal.addEventListener('click', e => {
         if (e.target === exportModal) {
             exportModal.classList.remove('active');
@@ -181,7 +156,6 @@ function setupEventListeners() {
     });
 }
 
-// Theme Functions
 function loadTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -196,20 +170,17 @@ function toggleTheme() {
     themeToggle.textContent = newTheme === 'dark' ? '🌙' : '☀️';
 }
 
-// Writing Prompt Functions
 function showRandomPrompt() {
     const randomPrompt = writingPrompts[Math.floor(Math.random() * writingPrompts.length)];
     promptText.textContent = randomPrompt;
 }
 
-// Mood Selection
 function selectMood(mood) {
     selectedMood = mood;
     moodBtns.forEach(btn => btn.classList.remove('selected'));
     document.querySelector(`[data-mood="${mood}"]`).classList.add('selected');
 }
 
-// Editor Tools
 function applyFormat(tool) {
     const textarea = journalEntryTextarea;
     const start = textarea.selectionStart;
@@ -245,7 +216,6 @@ function applyFormat(tool) {
     updateWritingStats();
 }
 
-// Tag Input Functions
 function handleTagInput(e) {
     const input = e.target.value.toLowerCase();
     const lastTag = input.split(',').pop().trim();
@@ -273,7 +243,6 @@ function showTagSuggestions(suggestions = commonTags.slice(0, 8)) {
     tagSuggestions.style.display = 'block';
 }
 
-// Make selectTag globally accessible for the onclick attribute
 window.selectTag = function(tag) {
     const currentTags = entryTags.value.split(',').map(t => t.trim()).filter(t => t);
     const lastTag = currentTags[currentTags.length - 1];
@@ -289,7 +258,6 @@ window.selectTag = function(tag) {
     entryTags.focus();
 }
 
-// Writing Stats
 function updateWritingStats() {
     const content = journalEntryTextarea.value.trim();
     const words = content.split(/\s+/).filter(word => word.length > 0).length;
@@ -301,7 +269,6 @@ function updateWritingStats() {
     readTime.textContent = readMinutes;
 }
 
-// Sidebar Functions
 function toggleSidebar() {
     const token = localStorage.getItem('journal_token');
     if (!token) {
@@ -338,7 +305,6 @@ function handleFilter() {
 function filterAndRenderEntries(query = '', filter = 'all') {
     let filteredEntries = [...currentEntries];
     
-    // Apply text search
     if (query) {
         filteredEntries = filteredEntries.filter(entry =>
             entry.title.toLowerCase().includes(query) ||
@@ -347,7 +313,6 @@ function filterAndRenderEntries(query = '', filter = 'all') {
         );
     }
     
-    // Apply date/mood filters
     const now = new Date();
     switch (filter) {
         case 'recent':
@@ -370,7 +335,6 @@ function filterAndRenderEntries(query = '', filter = 'all') {
     renderEntryList(filteredEntries);
 }
 
-// Entry Management
 function showEntryInViewer(entry) {
     activeEntryId = entry.timestamp;
     viewerTitle.textContent = entry.title || 'Untitled Entry';
@@ -378,7 +342,6 @@ function showEntryInViewer(entry) {
     viewerMood.textContent = entry.mood || '📝';
     viewerContent.textContent = entry.content;
     
-    // Display tags
     if (entry.tags && entry.tags.length > 0) {
         viewerTags.innerHTML = entry.tags.map(tag => 
             `<span class="tag">${escapeHtml(tag)}</span>`
@@ -389,7 +352,6 @@ function showEntryInViewer(entry) {
     
     entryViewer.classList.add('active');
     
-    // Update active state in sidebar
     document.querySelectorAll('.entry-item').forEach(item => {
         item.classList.remove('active');
     });
@@ -436,7 +398,6 @@ async function deleteEntry(timestamp) {
     }
 }
 
-// Export Functions
 function exportEntries(format) {
     if (currentEntries.length === 0) {
         showStatus('No entries to export.', 'error');
@@ -500,7 +461,6 @@ function downloadFile(content, filename, mimeType) {
     URL.revokeObjectURL(url);
 }
 
-// Authentication Functions
 async function hashPassword(password) {
     const data = new TextEncoder().encode(password);
     const hash = await crypto.subtle.digest('SHA-256', data);
@@ -509,7 +469,6 @@ async function hashPassword(password) {
         .join('');
 }
 
-// Improved API call function
 async function makeApiCall(endpoint, options = {}) {
     try {
         const url = `${apiUrl}${endpoint}`;
@@ -546,7 +505,6 @@ async function makeApiCall(endpoint, options = {}) {
     }
 }
 
-// Improved Register function
 async function handleRegister() {
     const username = document.getElementById('register-username').value.trim();
     const password = document.getElementById('register-password').value;
@@ -566,7 +524,6 @@ async function handleRegister() {
         return;
     }
     
-    // Show loading state
     registerBtn.innerHTML = '<span class="loading-spinner"></span>Creating Account...';
     registerBtn.disabled = true;
     
@@ -600,7 +557,6 @@ async function handleRegister() {
     }
 }
 
-// Improved Login function
 async function handleLogin() {
     const username = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
@@ -610,12 +566,10 @@ async function handleLogin() {
         return; 
     }
     
-    // Show loading state
     loginBtn.innerHTML = '<span class="loading-spinner"></span>Signing In...';
     loginBtn.disabled = true;
     
     try {
-        // Log for debugging
         console.log("Attempting login for user:", username);
         
         const hashedPassword = await hashPassword(password);
@@ -648,32 +602,27 @@ async function handleLogin() {
 }
 
 
-// Logout Function
 function handleLogout() { 
     localStorage.removeItem('journal_token'); 
     localStorage.removeItem('journal_user'); 
     authSection.style.display = 'block'; 
     journalSection.style.display = 'none'; 
     
-    // Hide sidebar completely when logged out
     sidebarToggle.style.display = 'none';
     sidebar.style.display = 'none';
     sidebar.classList.remove('open');
     sidebarToggle.classList.remove('sidebar-open');
     
-    // Clear sensitive data
     currentEntries = [];
     entryList.innerHTML = '';
     closeEntryViewer();
     currentUser = '';
     
-    // Clear forms
     document.getElementById('login-username').value = '';
     document.getElementById('login-password').value = '';
     document.getElementById('register-username').value = '';
     document.getElementById('register-password').value = '';
     
-    // Clear entry form
     document.getElementById('entry-title').value = '';
     journalEntryTextarea.value = '';
     entryTags.value = '';
@@ -684,7 +633,6 @@ function handleLogout() {
     showStatus('👋 Successfully logged out!', 'success');
 }
 
-// Save Entry Function
 async function handleSaveEntry() {
     const title = document.getElementById('entry-title').value.trim();
     const content = journalEntryTextarea.value.trim();
@@ -697,7 +645,6 @@ async function handleSaveEntry() {
         return;
     }
     
-    // Show loading state
     saveBtn.innerHTML = '<span class="loading-spinner"></span>Saving...';
     saveBtn.disabled = true;
     
@@ -718,7 +665,6 @@ async function handleSaveEntry() {
         if (response.ok) {
             showStatus('✨ Entry saved successfully!', 'success');
             
-            // Clear the form
             document.getElementById('entry-title').value = '';
             journalEntryTextarea.value = '';
             entryTags.value = '';
@@ -726,11 +672,9 @@ async function handleSaveEntry() {
             moodBtns.forEach(btn => btn.classList.remove('selected'));
             updateWritingStats();
             
-            // Close entry viewer and reload entries
             closeEntryViewer();
             await loadEntries();
             
-            // Show new random prompt
             showRandomPrompt();
             
         } else {
@@ -749,7 +693,6 @@ async function handleSaveEntry() {
     }
 }
 
-// Load Entries Function
 async function loadEntries() {
     const token = localStorage.getItem('journal_token');
     if (!token) {
@@ -808,7 +751,6 @@ function renderEntryList(entries = currentEntries) {
     
     entryList.innerHTML = entriesHtml;
     
-    // Add click listeners to entry items
     document.querySelectorAll('.entry-item').forEach(item => {
         item.addEventListener('click', (e) => {
             if (e.target.classList.contains('entry-delete')) return;
@@ -828,7 +770,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// UI View Management
 function showJournalView() { 
     authSection.style.display = 'none'; 
     journalSection.style.display = 'block'; 
@@ -871,11 +812,9 @@ function showStatus(message, type) {
     setTimeout(() => el.style.display = 'none', 5000); 
 }
 
-// Add some visual feedback and animations on page load
 window.addEventListener('load', () => {
     document.body.classList.add('loaded');
     
-    // Animate only the visible form elements
     const animateVisibleForm = (container) => {
         const formElements = container.querySelectorAll('.input-group, .btn, p');
         formElements.forEach((el, index) => {
@@ -884,13 +823,11 @@ window.addEventListener('load', () => {
         });
     };
 
-    // Animate the initially visible auth section
     if (loginForm.style.display !== 'none') {
         animateVisibleForm(authSection);
     }
 });
 
-// Add some Easter eggs and fun interactions
 let clickCount = 0;
 document.querySelector('h1').addEventListener('click', () => {
     clickCount++;
@@ -904,9 +841,7 @@ document.querySelector('h1').addEventListener('click', () => {
     }
 });
 
-// Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-    // Ctrl/Cmd + S to save
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
         if (journalSection.style.display !== 'none') {
@@ -914,7 +849,6 @@ document.addEventListener('keydown', (e) => {
         }
     }
     
-    // Ctrl/Cmd + E to export
     if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
         e.preventDefault();
         if (journalSection.style.display !== 'none') {
@@ -922,7 +856,6 @@ document.addEventListener('keydown', (e) => {
         }
     }
     
-    // Escape to close modals
     if (e.key === 'Escape') {
         exportModal.classList.remove('active');
         if (entryViewer.classList.contains('active')) {
@@ -931,7 +864,6 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Add typing sound effect simulation (visual feedback)
 let typingTimer;
 journalEntryTextarea.addEventListener('input', () => {
     journalEntryTextarea.style.borderColor = 'var(--orange-color)';
@@ -941,5 +873,4 @@ journalEntryTextarea.addEventListener('input', () => {
     }, 1000);
 });
 
-// Initial setup completion
 console.log('🎉 Enhanced Private Journal App loaded successfully!');
