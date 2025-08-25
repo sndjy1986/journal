@@ -1,8 +1,4 @@
-// sndjy1986/journal/journal-main/handlers/auth.js
 
-// --- Helper Functions for JWT ---
-
-// Base64 URL-safe encoding
 function base64UrlEncode(str) {
     return btoa(str)
         .replace(/\+/g, '-')
@@ -10,7 +6,6 @@ function base64UrlEncode(str) {
         .replace(/=+$/, '');
 }
 
-// Simple JWT sign function
 async function sign(payload, secret) {
     const header = {
         alg: 'HS256',
@@ -45,11 +40,7 @@ async function sign(payload, secret) {
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
-// --- Route Handlers ---
 
-/**
- * Handles new user registration.
- */
 export async function handleRegister(request, env) {
     try {
         const { username, password } = await request.json();
@@ -60,7 +51,7 @@ export async function handleRegister(request, env) {
         if (username.length < 3) {
             return new Response(JSON.stringify({ error: 'Username must be at least 3 characters long' }), { status: 400, headers: jsonHeaders });
         }
-        if (password.length < 64) { // SHA-256 hash is 64 hex characters
+        if (password.length < 64) { 
              return new Response(JSON.stringify({ error: 'Invalid password hash format' }), { status: 400, headers: jsonHeaders });
         }
 
@@ -73,7 +64,7 @@ export async function handleRegister(request, env) {
 
         const userData = {
             username,
-            password, // Password is saved pre-hashed from the client
+            password, 
             registeredAt: new Date().toISOString()
         };
 
@@ -87,9 +78,6 @@ export async function handleRegister(request, env) {
     }
 }
 
-/**
- * Handles user login.
- */
 export async function handleLogin(request, env) {
     const secret = env.JWT_SECRET;
     if (!secret) {
@@ -117,11 +105,11 @@ export async function handleLogin(request, env) {
             return new Response(JSON.stringify({ error: 'Invalid username or password' }), { status: 401, headers: jsonHeaders });
         }
 
-        // Passwords match, generate a JWT
+     
         const payload = {
             username: userData.username,
             iat: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7) // 7 days
+            exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7) 
         };
 
         const token = await sign(payload, secret);
