@@ -1,3 +1,4 @@
+// sndjy1986/journal/journal-main/view/script.js
 
 // API Configuration
 const apiUrl = ''; // The worker will be on the same domain, so this can be empty
@@ -272,7 +273,8 @@ function showTagSuggestions(suggestions = commonTags.slice(0, 8)) {
     tagSuggestions.style.display = 'block';
 }
 
-function selectTag(tag) {
+// Make selectTag globally accessible for the onclick attribute
+window.selectTag = function(tag) {
     const currentTags = entryTags.value.split(',').map(t => t.trim()).filter(t => t);
     const lastTag = currentTags[currentTags.length - 1];
     
@@ -502,13 +504,16 @@ function downloadFile(content, filename, mimeType) {
 async function hashPassword(password) {
     const data = new TextEncoder().encode(password);
     const hash = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    return Array.from(new Uint8Array(hash))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
 }
 
-// Utility function to make API calls
+// Improved API call function
 async function makeApiCall(endpoint, options = {}) {
     try {
         const url = `${apiUrl}${endpoint}`;
+        console.log(`Making API call to: ${url}`, options.method || 'GET');
         
         const requestOptions = {
             headers: {
@@ -519,10 +524,12 @@ async function makeApiCall(endpoint, options = {}) {
         };
         
         const response = await fetch(url, requestOptions);
+        console.log(`API response status: ${response.status}`);
         
         let data;
         try {
             const responseText = await response.text();
+            console.log("Response text:", responseText.substring(0, 100) + (responseText.length > 100 ? '...' : ''));
             data = responseText ? JSON.parse(responseText) : {};
         } catch (e) {
             console.error('Failed to parse response as JSON:', e);
@@ -539,7 +546,7 @@ async function makeApiCall(endpoint, options = {}) {
     }
 }
 
-// Register Function
+// Improved Register function
 async function handleRegister() {
     const username = document.getElementById('register-username').value.trim();
     const password = document.getElementById('register-password').value;
@@ -564,27 +571,36 @@ async function handleRegister() {
     registerBtn.disabled = true;
     
     try {
+        console.log("Attempting to register user:", username);
+        
         const hashedPassword = await hashPassword(password);
+        console.log("Password hashed. Hash length:", hashedPassword.length);
+        
         const { response, data } = await makeApiCall('/register', {
             method: 'POST',
             body: JSON.stringify({ username, password: hashedPassword })
         });
         
+        console.log("Registration response status:", response.status);
+        
         if (response.ok) { 
+            console.log("Registration successful");
             showAuthSuccess('🎉 Registration successful! Please log in.'); 
             showLogin.click(); 
         } else { 
+            console.error("Registration failed:", data.error);
             showAuthError(data.error || 'Registration failed.'); 
         }
     } catch (error) {
-        showAuthError('Registration failed. Please try again.');
+        console.error("Registration error:", error);
+        showAuthError('Registration failed. Please try again. ' + error.message);
     } finally {
         registerBtn.innerHTML = 'Create Account';
         registerBtn.disabled = false;
     }
 }
 
-// Login Function
+// Improved Login function
 async function handleLogin() {
     const username = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
@@ -599,27 +615,38 @@ async function handleLogin() {
     loginBtn.disabled = true;
     
     try {
+        // Log for debugging
+        console.log("Attempting login for user:", username);
+        
         const hashedPassword = await hashPassword(password);
+        console.log("Password hashed. Hash length:", hashedPassword.length);
+        
         const { response, data } = await makeApiCall('/login', {
             method: 'POST',
             body: JSON.stringify({ username, password: hashedPassword })
         });
         
+        console.log("Login response status:", response.status);
+        
         if (response.ok) { 
+            console.log("Login successful, storing token");
             localStorage.setItem('journal_token', data.token); 
             localStorage.setItem('journal_user', username);
             currentUser = username;
             showJournalView(); 
         } else { 
+            console.error("Login failed:", data.error);
             showAuthError(data.error || 'Login failed.'); 
         }
     } catch (error) {
-        showAuthError('Login failed. Please try again.');
+        console.error("Login error:", error);
+        showAuthError('Login failed. Please try again. ' + error.message);
     } finally {
         loginBtn.innerHTML = 'Sign In';
         loginBtn.disabled = false;
     }
 }
+
 
 // Logout Function
 function handleLogout() { 
