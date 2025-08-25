@@ -1,9 +1,7 @@
-// Import handlers
 import { handleLogin, handleRegister } from './handlers/auth.js';
 import { handleGetEntries, handleSaveEntry, handleDeleteEntry } from './handlers/entries.js';
 import { handleStatic } from './handlers/static.js';
 
-// --- A Simple, Self-Contained Router ---
 const router = {
   routes: [],
   add(method, path, handler) {
@@ -35,7 +33,6 @@ const router = {
       }
     }
     
-    // If no API route matches, serve the static HTML page
     if (method === 'GET' && (pathname === '/' || pathname === '/index.html')) {
       return handleStatic(request, ...args);
     }
@@ -44,21 +41,18 @@ const router = {
   }
 };
 
-// --- Define API Routes ---
 router.post('/register', handleRegister);
 router.post('/login', handleLogin);
 router.post('/entries', handleSaveEntry);
 router.get('/entries', handleGetEntries);
 router.delete('/entries/:timestamp', handleDeleteEntry);
 
-// --- CORS Headers ---
 const corsHeaders = {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, DELETE',
     'Access-Control-Allow-Origin': '*',
 };
 
-// --- Main Fetch Handler ---
 export default {
     fetch: (request, env, ctx) =>
         router
