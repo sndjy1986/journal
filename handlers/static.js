@@ -1,4 +1,4 @@
-// This handler serves the main HTML page with inline CSS and JS
+
 
 export async function handleStatic(request, env) {
     const html = `<!DOCTYPE html>
