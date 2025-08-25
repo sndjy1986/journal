@@ -1,159 +1,164 @@
-// Simple JWT implementation for Cloudflare Workers
-// This avoids external dependencies that can cause import issues
+// Copy this code into your script.js file to fix the authentication issues
 
-// Base64 URL-safe encoding
-function base64UrlEncode(str) {
-    return btoa(str)
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
+// Fix 1: Update the hashPassword function to ensure it matches server expectations
+async function hashPassword(password) {
+    const data = new TextEncoder().encode(password);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
 }
 
-// Base64 URL-safe decoding
-function base64UrlDecode(str) {
-    str += '='.repeat((4 - str.length % 4) % 4);
-    return atob(str.replace(/-/g, '+').replace(/_/g, '/'));
+// Fix 2: Make selectTag function globally accessible
+window.selectTag = function(tag) {
+    const currentTags = entryTags.value.split(',').map(t => t.trim()).filter(t => t);
+    const lastTag = currentTags[currentTags.length - 1];
+    
+    if (lastTag && !commonTags.includes(lastTag)) {
+        currentTags[currentTags.length - 1] = tag;
+    } else {
+        currentTags.push(tag);
+    }
+    
+    entryTags.value = currentTags.join(', ');
+    tagSuggestions.style.display = 'none';
+    entryTags.focus();
 }
 
-// Simple JWT sign function
-async function sign(payload, secret) {
-    const header = {
-        alg: 'HS256',
-        typ: 'JWT'
-    };
+// Fix 3: Improved error handling in Login and Register functions
+async function handleLogin() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
     
-    const encodedHeader = base64UrlEncode(JSON.stringify(header));
-    const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+    if (!username || !password) { 
+        showAuthError('Please enter a username and password.'); 
+        return; 
+    }
     
-    const data = encodedHeader + '.' + encodedPayload;
-    const key = await crypto.subtle.importKey(
-        'raw',
-        new TextEncoder().encode(secret),
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['sign']
-    );
-    
-    const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
-    const encodedSignature = base64UrlEncode(String.fromCharCode(...new Uint8Array(signature)));
-    
-    return data + '.' + encodedSignature;
-}
-
-// Simple JWT verify function
-async function verify(token, secret) {
-    const parts = token.split('.');
-    if (parts.length !== 3) return false;
-    
-    const [header, payload, signature] = parts;
-    const data = header + '.' + payload;
+    // Show loading state
+    loginBtn.innerHTML = '<span class="loading-spinner"></span>Signing In...';
+    loginBtn.disabled = true;
     
     try {
-        const key = await crypto.subtle.importKey(
-            'raw',
-            new TextEncoder().encode(secret),
-            { name: 'HMAC', hash: 'SHA-256' },
-            false,
-            ['verify']
-        );
+        // Log for debugging
+        console.log("Attempting login for user:", username);
         
-        const signatureBytes = new Uint8Array(
-            Array.from(base64UrlDecode(signature)).map(c => c.charCodeAt(0))
-        );
+        const hashedPassword = await hashPassword(password);
+        console.log("Password hashed. Hash length:", hashedPassword.length);
         
-        const isValid = await crypto.subtle.verify(
-            'HMAC',
-            key,
-            signatureBytes,
-            new TextEncoder().encode(data)
-        );
+        const { response, data } = await makeApiCall('/login', {
+            method: 'POST',
+            body: JSON.stringify({ username, password: hashedPassword })
+        });
         
-        if (!isValid) return false;
+        console.log("Login response status:", response.status);
         
-        // Check expiration
-        const decodedPayload = JSON.parse(base64UrlDecode(payload));
-        if (decodedPayload.exp && decodedPayload.exp < Math.floor(Date.now() / 1000)) {
-            return false;
+        if (response.ok) { 
+            console.log("Login successful, storing token");
+            localStorage.setItem('journal_token', data.token); 
+            localStorage.setItem('journal_user', username);
+            currentUser = username;
+            showJournalView(); 
+        } else { 
+            console.error("Login failed:", data.error);
+            showAuthError(data.error || 'Login failed.'); 
         }
-        
-        return true;
-    } catch (e) {
-        return false;
+    } catch (error) {
+        console.error("Login error:", error);
+        showAuthError('Login failed. Please try again. ' + error.message);
+    } finally {
+        loginBtn.innerHTML = 'Sign In';
+        loginBtn.disabled = false;
     }
 }
 
-// Common headers for JSON responses
-const jsonHeaders = { 'Content-Type': 'application/json' };
-
-/**
- * Handles user registration.
- */
-export async function handleRegister(request, env) {
+// Fix 4: Improved Register function with better error handling
+async function handleRegister() {
+    const username = document.getElementById('register-username').value.trim();
+    const password = document.getElementById('register-password').value;
+    
+    if (!username || !password) { 
+        showAuthError('Please enter a username and password.'); 
+        return; 
+    }
+    
+    if (username.length < 3) {
+        showAuthError('Username must be at least 3 characters long.');
+        return;
+    }
+    
+    if (password.length < 6) {
+        showAuthError('Password must be at least 6 characters long.');
+        return;
+    }
+    
+    // Show loading state
+    registerBtn.innerHTML = '<span class="loading-spinner"></span>Creating Account...';
+    registerBtn.disabled = true;
+    
     try {
-        const { username, password } = await request.json();
-
-        if (!username || !password) {
-            return new Response(JSON.stringify({ error: 'Username and password are required' }), { status: 400, headers: jsonHeaders });
-        }
-        if (username.length < 3) {
-            return new Response(JSON.stringify({ error: 'Username must be at least 3 characters long' }), { status: 400, headers: jsonHeaders });
-        }
-        if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-            return new Response(JSON.stringify({ error: 'Username can only contain letters, numbers, underscores, and hyphens' }), { status: 400, headers: jsonHeaders });
-        }
-        if (typeof password !== 'string' || !/^[a-f0-9]{64}$/.test(password)) {
-            return new Response(JSON.stringify({ error: 'Invalid password format' }), { status: 400, headers: jsonHeaders });
-        }
-
-        const userKey = `user:${username}`;
-        const existingUser = await env.JOURNAL_KV.get(userKey);
+        console.log("Attempting to register user:", username);
         
-        if (existingUser) {
-            return new Response(JSON.stringify({ error: 'Username already taken' }), { status: 400, headers: jsonHeaders });
-        }
-
-        await env.JOURNAL_KV.put(userKey, password);
+        const hashedPassword = await hashPassword(password);
+        console.log("Password hashed. Hash length:", hashedPassword.length);
         
-        return new Response(JSON.stringify({ success: true }), { status: 201, headers: jsonHeaders });
-    } catch (e) {
-        console.error('Registration error:', e);
-        return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: jsonHeaders });
+        const { response, data } = await makeApiCall('/register', {
+            method: 'POST',
+            body: JSON.stringify({ username, password: hashedPassword })
+        });
+        
+        console.log("Registration response status:", response.status);
+        
+        if (response.ok) { 
+            console.log("Registration successful");
+            showAuthSuccess('🎉 Registration successful! Please log in.'); 
+            showLogin.click(); 
+        } else { 
+            console.error("Registration failed:", data.error);
+            showAuthError(data.error || 'Registration failed.'); 
+        }
+    } catch (error) {
+        console.error("Registration error:", error);
+        showAuthError('Registration failed. Please try again. ' + error.message);
+    } finally {
+        registerBtn.innerHTML = 'Create Account';
+        registerBtn.disabled = false;
     }
 }
 
-/**
- * Handles user login and issues a JWT.
- */
-export async function handleLogin(request, env) {
+// Fix 5: Improved API call function with better error handling
+async function makeApiCall(endpoint, options = {}) {
     try {
-        const { username, password } = await request.json();
+        const url = `${apiUrl}${endpoint}`;
+        console.log(`Making API call to: ${url}`, options.method || 'GET');
         
-        if (!username || !password) {
-            return new Response(JSON.stringify({ error: 'Username and password are required' }), { status: 400, headers: jsonHeaders });
+        const requestOptions = {
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            },
+            ...options
+        };
+        
+        const response = await fetch(url, requestOptions);
+        console.log(`API response status: ${response.status}`);
+        
+        let data;
+        try {
+            const responseText = await response.text();
+            console.log("Response text:", responseText.substring(0, 100) + (responseText.length > 100 ? '...' : ''));
+            data = responseText ? JSON.parse(responseText) : {};
+        } catch (e) {
+            console.error('Failed to parse response as JSON:', e);
+            data = { error: 'Invalid response from server' };
         }
-
-        const storedPassword = await env.JOURNAL_KV.get(`user:${username}`);
         
-        if (!storedPassword || storedPassword !== password) {
-            return new Response(JSON.stringify({ error: 'Invalid credentials' }), { status: 401, headers: jsonHeaders });
-        }
-
-        const secret = env.JWT_SECRET;
-        if (!secret) {
-            console.error('JWT_SECRET not configured');
-            return new Response(JSON.stringify({ error: 'Server configuration error' }), { status: 500, headers: jsonHeaders });
-        }
-
-        const token = await sign({ 
-            username, 
-            iat: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) // 24 hours
-        }, secret);
-        
-        return new Response(JSON.stringify({ token }), { status: 200, headers: jsonHeaders });
-        
-    } catch (e) {
-        console.error('Login error:', e);
-        return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: jsonHeaders });
+        return { response, data };
+    } catch (error) {
+        console.error(`API call error for ${endpoint}:`, error);
+        return { 
+            response: { ok: false, status: 500 }, 
+            data: { error: 'Could not connect to the server. Please try again.' } 
+        };
     }
 }
