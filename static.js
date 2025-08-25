@@ -1,7 +1,7 @@
 // This handler serves the main HTML page with inline CSS and JS
 
 export async function handleStatic(request, env) {
-    const html = '<!DOCTYPE html>\\n' +
+    const html = `<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
