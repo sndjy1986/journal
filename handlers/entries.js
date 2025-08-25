@@ -1,10 +1,8 @@
-// Base64 URL-safe decoding
 function base64UrlDecode(str) {
     str += '='.repeat((4 - str.length % 4) % 4);
     return atob(str.replace(/-/g, '+').replace(/_/g, '/'));
 }
 
-// Simple JWT verify function
 async function verify(token, secret) {
     const parts = token.split('.');
     if (parts.length !== 3) return false;
@@ -34,7 +32,6 @@ async function verify(token, secret) {
         
         if (!isValid) return false;
         
-        // Check expiration
         const decodedPayload = JSON.parse(base64UrlDecode(payload));
         if (decodedPayload.exp && decodedPayload.exp < Math.floor(Date.now() / 1000)) {
             return false;
@@ -46,13 +43,9 @@ async function verify(token, secret) {
     }
 }
 
-// Common headers for JSON responses
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
-/**
- * A helper function to verify the JWT from the Authorization header.
- * Returns the payload on success, or null on failure.
- */
+
 async function verifyAuth(request, env) {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -71,7 +64,6 @@ async function verifyAuth(request, env) {
         const isValid = await verify(token, secret);
         if (!isValid) return null;
 
-        // Decode payload manually after verification
         const parts = token.split('.');
         const payloadJson = base64UrlDecode(parts[1]);
         const payload = JSON.parse(payloadJson);
@@ -83,9 +75,7 @@ async function verifyAuth(request, env) {
     }
 }
 
-/**
- * Saves a new journal entry.
- */
+
 export async function handleSaveEntry(request, env) {
     const payload = await verifyAuth(request, env);
     if (!payload) {
@@ -118,9 +108,7 @@ export async function handleSaveEntry(request, env) {
     }
 }
 
-/**
- * Retrieves all journal entries for a user.
- */
+
 export async function handleGetEntries(request, env) {
     const payload = await verifyAuth(request, env);
     if (!payload) {
@@ -137,7 +125,7 @@ export async function handleGetEntries(request, env) {
 
         const entries = (await Promise.all(promises)).filter(entry => entry !== null);
         
-        // Sort by timestamp, newest first
+  
         entries.sort((a, b) => b.timestamp - a.timestamp);
         
         return new Response(JSON.stringify(entries), { status: 200, headers: jsonHeaders });
@@ -147,9 +135,7 @@ export async function handleGetEntries(request, env) {
     }
 }
 
-/**
- * Deletes a specific journal entry.
- */
+
 export async function handleDeleteEntry(request, env) {
     const payload = await verifyAuth(request, env);
     if (!payload) {
