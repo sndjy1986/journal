@@ -1,7 +1,7 @@
 // This handler serves the main HTML page with inline CSS and JS
 
 export async function handleStatic(request, env) {
-    const html = `<!DOCTYPE html>
+    const html = \`<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
@@ -1329,7 +1329,7 @@ function showTagSuggestions(suggestions = commonTags.slice(0, 8)) {
     }
     
     tagSuggestions.innerHTML = suggestions.map(tag => 
-        '<div class="tag-suggestion" onclick="selectTag(\\'' + tag + '\\')">' + tag + '</div>'
+        '<div class="tag-suggestion" onclick="selectTag(\\\\' + tag + '\\\\')">' + tag + '</div>'
     ).join('');
     tagSuggestions.style.display = 'block';
 }
@@ -1353,7 +1353,8 @@ window.selectTag = function(tag) {
 // Writing Stats
 function updateWritingStats() {
     const content = journalEntryTextarea.value.trim();
-    const words = content.split(/\\s+/).filter(word => word.length > 0).length;
+    // **FIX**: Escaped the backslash in the regular expression
+    const words = content.split(/\\\\s+/).filter(word => word.length > 0).length;
     const chars = content.length;
     const readMinutes = Math.ceil(words / 200); // Average reading speed
     
@@ -1531,20 +1532,20 @@ function exportEntries(format) {
 }
 
 function generateTextExport(exportData) {
-    let text = 'PRIVATE JOURNAL EXPORT\\n';
-    text += 'User: ' + exportData.user + '\\n';
-    text += 'Export Date: ' + new Date(exportData.exportDate).toLocaleString() + '\\n';
-    text += 'Total Entries: ' + exportData.totalEntries + '\\n';
-    text += '='.repeat(50) + '\\n\\n';
+    let text = 'PRIVATE JOURNAL EXPORT\\\\n';
+    text += 'User: ' + exportData.user + '\\\\n';
+    text += 'Export Date: ' + new Date(exportData.exportDate).toLocaleString() + '\\\\n';
+    text += 'Total Entries: ' + exportData.totalEntries + '\\\\n';
+    text += '='.repeat(50) + '\\\\n\\\\n';
     
     exportData.entries.forEach((entry, index) => {
-        text += 'ENTRY ' + (index + 1) + '\\n';
-        text += 'Title: ' + (entry.title || 'Untitled') + '\\n';
-        text += 'Date: ' + new Date(entry.timestamp).toLocaleString() + '\\n';
-        if (entry.mood) text += 'Mood: ' + entry.mood + '\\n';
-        if (entry.tags && entry.tags.length > 0) text += 'Tags: ' + entry.tags.join(', ') + '\\n';
-        text += '\\n' + entry.content + '\\n';
-        text += '-'.repeat(30) + '\\n\\n';
+        text += 'ENTRY ' + (index + 1) + '\\\\n';
+        text += 'Title: ' + (entry.title || 'Untitled') + '\\\\n';
+        text += 'Date: ' + new Date(entry.timestamp).toLocaleString() + '\\\\n';
+        if (entry.mood) text += 'Mood: ' + entry.mood + '\\\\n';
+        if (entry.tags && entry.tags.length > 0) text += 'Tags: ' + entry.tags.join(', ') + '\\\\n';
+        text += '\\\\n' + entry.content + '\\\\n';
+        text += '-'.repeat(30) + '\\\\n\\\\n';
     });
     
     return text;
@@ -1976,7 +1977,7 @@ journalEntryTextarea.addEventListener('input', () => {
 console.log('🎉 Enhanced Private Journal App loaded successfully!');
     </script>
 </body>
-</html>`;
+</html>\`;
 
     return new Response(html, {
         headers: {
