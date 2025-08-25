@@ -54,7 +54,7 @@ You need to have Node.js, npm, and the Wrangler CLI installed.
 
 1.  **Clone the repo**
     ```bash
-    git clone {https://github.com/your-username/your-repository.git]](https://github.com/sndjy1986/journal.git)
+    git clone https://github.com/sndjy1986/journal.git
     cd your-repository
     ```
 2.  **Install NPM packages**
