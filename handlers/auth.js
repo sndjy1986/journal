@@ -1,164 +1,135 @@
-// Copy this code into your script.js file to fix the authentication issues
+// sndjy1986/journal/journal-main/handlers/auth.js
 
-// Fix 1: Update the hashPassword function to ensure it matches server expectations
-async function hashPassword(password) {
-    const data = new TextEncoder().encode(password);
-    const hash = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(hash))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+// --- Helper Functions for JWT ---
+
+// Base64 URL-safe encoding
+function base64UrlEncode(str) {
+    return btoa(str)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
 }
 
-// Fix 2: Make selectTag function globally accessible
-window.selectTag = function(tag) {
-    const currentTags = entryTags.value.split(',').map(t => t.trim()).filter(t => t);
-    const lastTag = currentTags[currentTags.length - 1];
+// Simple JWT sign function
+async function sign(payload, secret) {
+    const header = {
+        alg: 'HS256',
+        typ: 'JWT'
+    };
     
-    if (lastTag && !commonTags.includes(lastTag)) {
-        currentTags[currentTags.length - 1] = tag;
-    } else {
-        currentTags.push(tag);
-    }
+    const encodedHeader = base64UrlEncode(JSON.stringify(header));
+    const encodedPayload = base64UrlEncode(JSON.stringify(payload));
     
-    entryTags.value = currentTags.join(', ');
-    tagSuggestions.style.display = 'none';
-    entryTags.focus();
+    const data = `${encodedHeader}.${encodedPayload}`;
+    
+    const key = await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(secret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+    );
+    
+    const signature = await crypto.subtle.sign(
+        'HMAC',
+        key,
+        new TextEncoder().encode(data)
+    );
+    
+    const encodedSignature = base64UrlEncode(
+        String.fromCharCode(...new Uint8Array(signature))
+    );
+    
+    return `${data}.${encodedSignature}`;
 }
 
-// Fix 3: Improved error handling in Login and Register functions
-async function handleLogin() {
-    const username = document.getElementById('login-username').value.trim();
-    const password = document.getElementById('login-password').value;
-    
-    if (!username || !password) { 
-        showAuthError('Please enter a username and password.'); 
-        return; 
-    }
-    
-    // Show loading state
-    loginBtn.innerHTML = '<span class="loading-spinner"></span>Signing In...';
-    loginBtn.disabled = true;
-    
+const jsonHeaders = { 'Content-Type': 'application/json' };
+
+// --- Route Handlers ---
+
+/**
+ * Handles new user registration.
+ */
+export async function handleRegister(request, env) {
     try {
-        // Log for debugging
-        console.log("Attempting login for user:", username);
-        
-        const hashedPassword = await hashPassword(password);
-        console.log("Password hashed. Hash length:", hashedPassword.length);
-        
-        const { response, data } = await makeApiCall('/login', {
-            method: 'POST',
-            body: JSON.stringify({ username, password: hashedPassword })
-        });
-        
-        console.log("Login response status:", response.status);
-        
-        if (response.ok) { 
-            console.log("Login successful, storing token");
-            localStorage.setItem('journal_token', data.token); 
-            localStorage.setItem('journal_user', username);
-            currentUser = username;
-            showJournalView(); 
-        } else { 
-            console.error("Login failed:", data.error);
-            showAuthError(data.error || 'Login failed.'); 
+        const { username, password } = await request.json();
+
+        if (!username || !password) {
+            return new Response(JSON.stringify({ error: 'Username and password are required' }), { status: 400, headers: jsonHeaders });
         }
-    } catch (error) {
-        console.error("Login error:", error);
-        showAuthError('Login failed. Please try again. ' + error.message);
-    } finally {
-        loginBtn.innerHTML = 'Sign In';
-        loginBtn.disabled = false;
-    }
-}
-
-// Fix 4: Improved Register function with better error handling
-async function handleRegister() {
-    const username = document.getElementById('register-username').value.trim();
-    const password = document.getElementById('register-password').value;
-    
-    if (!username || !password) { 
-        showAuthError('Please enter a username and password.'); 
-        return; 
-    }
-    
-    if (username.length < 3) {
-        showAuthError('Username must be at least 3 characters long.');
-        return;
-    }
-    
-    if (password.length < 6) {
-        showAuthError('Password must be at least 6 characters long.');
-        return;
-    }
-    
-    // Show loading state
-    registerBtn.innerHTML = '<span class="loading-spinner"></span>Creating Account...';
-    registerBtn.disabled = true;
-    
-    try {
-        console.log("Attempting to register user:", username);
-        
-        const hashedPassword = await hashPassword(password);
-        console.log("Password hashed. Hash length:", hashedPassword.length);
-        
-        const { response, data } = await makeApiCall('/register', {
-            method: 'POST',
-            body: JSON.stringify({ username, password: hashedPassword })
-        });
-        
-        console.log("Registration response status:", response.status);
-        
-        if (response.ok) { 
-            console.log("Registration successful");
-            showAuthSuccess('🎉 Registration successful! Please log in.'); 
-            showLogin.click(); 
-        } else { 
-            console.error("Registration failed:", data.error);
-            showAuthError(data.error || 'Registration failed.'); 
+        if (username.length < 3) {
+            return new Response(JSON.stringify({ error: 'Username must be at least 3 characters long' }), { status: 400, headers: jsonHeaders });
         }
-    } catch (error) {
-        console.error("Registration error:", error);
-        showAuthError('Registration failed. Please try again. ' + error.message);
-    } finally {
-        registerBtn.innerHTML = 'Create Account';
-        registerBtn.disabled = false;
-    }
-}
+        if (password.length < 64) { // SHA-256 hash is 64 hex characters
+             return new Response(JSON.stringify({ error: 'Invalid password hash format' }), { status: 400, headers: jsonHeaders });
+        }
 
-// Fix 5: Improved API call function with better error handling
-async function makeApiCall(endpoint, options = {}) {
-    try {
-        const url = `${apiUrl}${endpoint}`;
-        console.log(`Making API call to: ${url}`, options.method || 'GET');
-        
-        const requestOptions = {
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers
-            },
-            ...options
+        const userKey = `user:${username}`;
+        const existingUser = await env.JOURNAL_KV.get(userKey);
+
+        if (existingUser) {
+            return new Response(JSON.stringify({ error: 'Username already taken' }), { status: 409, headers: jsonHeaders });
+        }
+
+        const userData = {
+            username,
+            password, // Password is saved pre-hashed from the client
+            registeredAt: new Date().toISOString()
         };
-        
-        const response = await fetch(url, requestOptions);
-        console.log(`API response status: ${response.status}`);
-        
-        let data;
-        try {
-            const responseText = await response.text();
-            console.log("Response text:", responseText.substring(0, 100) + (responseText.length > 100 ? '...' : ''));
-            data = responseText ? JSON.parse(responseText) : {};
-        } catch (e) {
-            console.error('Failed to parse response as JSON:', e);
-            data = { error: 'Invalid response from server' };
+
+        await env.JOURNAL_KV.put(userKey, JSON.stringify(userData));
+
+        return new Response(JSON.stringify({ success: true }), { status: 201, headers: jsonHeaders });
+
+    } catch (e) {
+        console.error('Registration error:', e);
+        return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: jsonHeaders });
+    }
+}
+
+/**
+ * Handles user login.
+ */
+export async function handleLogin(request, env) {
+    const secret = env.JWT_SECRET;
+    if (!secret) {
+        console.error('JWT_SECRET not configured in Cloudflare Worker secrets.');
+        return new Response(JSON.stringify({ error: 'Server configuration error' }), { status: 500, headers: jsonHeaders });
+    }
+    
+    try {
+        const { username, password } = await request.json();
+
+        if (!username || !password) {
+            return new Response(JSON.stringify({ error: 'Username and password are required' }), { status: 400, headers: jsonHeaders });
         }
-        
-        return { response, data };
-    } catch (error) {
-        console.error(`API call error for ${endpoint}:`, error);
-        return { 
-            response: { ok: false, status: 500 }, 
-            data: { error: 'Could not connect to the server. Please try again.' } 
+
+        const userKey = `user:${username}`;
+        const userDataJson = await env.JOURNAL_KV.get(userKey);
+
+        if (!userDataJson) {
+            return new Response(JSON.stringify({ error: 'Invalid username or password' }), { status: 401, headers: jsonHeaders });
+        }
+
+        const userData = JSON.parse(userDataJson);
+
+        if (userData.password !== password) {
+            return new Response(JSON.stringify({ error: 'Invalid username or password' }), { status: 401, headers: jsonHeaders });
+        }
+
+        // Passwords match, generate a JWT
+        const payload = {
+            username: userData.username,
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7) // 7 days
         };
+
+        const token = await sign(payload, secret);
+
+        return new Response(JSON.stringify({ token }), { status: 200, headers: jsonHeaders });
+
+    } catch (e) {
+        console.error('Login error:', e);
+        return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: jsonHeaders });
     }
 }
