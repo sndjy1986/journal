@@ -890,7 +890,6 @@ export async function handleStatic(request, env) {
     </style>
 </head>
 <body>
-    <!-- Theme Toggle -->
     <button class="theme-toggle" id="theme-toggle" title="Toggle theme">🌙</button>
     
     <main id="main-content">
@@ -936,13 +935,11 @@ export async function handleStatic(request, env) {
             <div id="journal-section" style="display: none;">
                 <h2 id="welcome-message"></h2>
                 
-                <!-- Writing Prompt -->
                 <div class="writing-prompt" id="writing-prompt-section">
                     <div class="prompt-text" id="prompt-text">What made you smile today?</div>
                     <button class="new-prompt-btn" id="new-prompt-btn">✨ New Prompt</button>
                 </div>
                 
-                <!-- Font Selector -->
                 <div class="input-group">
                     <label for="font-selector">Writing Font:</label>
                     <select id="font-selector">
@@ -953,7 +950,6 @@ export async function handleStatic(request, env) {
                     </select>
                 </div>
                 
-                <!-- Mood Selector -->
                 <div class="mood-selector">
                     <label>How are you feeling?</label>
                     <div class="mood-options">
@@ -968,20 +964,17 @@ export async function handleStatic(request, env) {
                     </div>
                 </div>
                 
-                <!-- Entry Title -->
                 <div class="input-group floating">
                     <input type="text" id="entry-title" placeholder=" ">
                     <label class="floating-label">Entry Title (optional)</label>
                 </div>
                 
-                <!-- Tags Input -->
                 <div class="input-group tags-input-container">
                     <label for="entry-tags">Tags (comma-separated):</label>
                     <input type="text" id="entry-tags" placeholder="work, personal, ideas, gratitude...">
                     <div class="tag-suggestions" id="tag-suggestions"></div>
                 </div>
                 
-                <!-- Editor Container -->
                 <div class="editor-container">
                     <div class="editor-toolbar">
                         <button class="tool-btn" data-tool="bold" title="Bold">**B**</button>
@@ -996,7 +989,6 @@ export async function handleStatic(request, env) {
                     </div>
                 </div>
                 
-                <!-- Writing Stats -->
                 <div class="writing-stats" id="writing-stats">
                     <div class="stat-item">
                         <span class="stat-value" id="word-count">0</span>
@@ -1012,7 +1004,6 @@ export async function handleStatic(request, env) {
                     </div>
                 </div>
                 
-                <!-- Action Buttons -->
                 <div style="text-align: center;">
                     <button id="save-btn" class="btn">💾 Save Entry</button>
                     <button id="export-btn" class="btn export-btn">📄 Export All</button>
@@ -1021,7 +1012,6 @@ export async function handleStatic(request, env) {
                 
                 <div id="save-status" style="display: none;"></div>
                 
-                <!-- Entry Viewer -->
                 <div id="entry-viewer" class="entry-viewer">
                     <button class="close-viewer" id="close-viewer">← Back to Writing</button>
                     <h3 id="viewer-title">Entry Title</h3>
@@ -1036,16 +1026,13 @@ export async function handleStatic(request, env) {
         </div>
     </main>
     
-    <!-- Sidebar Toggle Button -->
     <button class="sidebar-toggle" id="sidebar-toggle">
         <span id="toggle-icon">📖</span>
     </button>
     
-    <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <h3>📚 Your Journal</h3>
         
-        <!-- Sidebar Controls -->
         <div class="sidebar-controls">
             <input type="text" class="search-box" id="search-box" placeholder="🔍 Search entries...">
             <select class="filter-select" id="filter-select">
@@ -1061,7 +1048,6 @@ export async function handleStatic(request, env) {
         </div>
     </div>
     
-    <!-- Export Modal -->
     <div class="modal-overlay" id="export-modal">
         <div class="modal">
             <h3>📄 Export Your Journal</h3>
@@ -1348,7 +1334,8 @@ function showTagSuggestions(suggestions = commonTags.slice(0, 8)) {
     tagSuggestions.style.display = 'block';
 }
 
-function selectTag(tag) {
+// **FIX**: Make selectTag globally accessible for the onclick attribute
+window.selectTag = function(tag) {
     const currentTags = entryTags.value.split(',').map(t => t.trim()).filter(t => t);
     const lastTag = currentTags[currentTags.length - 1];
     
@@ -1366,7 +1353,7 @@ function selectTag(tag) {
 // Writing Stats
 function updateWritingStats() {
     const content = journalEntryTextarea.value.trim();
-    const words = content.split(/\s+/).filter(word => word.length > 0).length;
+    const words = content.split(/\\s+/).filter(word => word.length > 0).length;
     const chars = content.length;
     const readMinutes = Math.ceil(words / 200); // Average reading speed
     
@@ -1478,7 +1465,8 @@ function closeEntryViewer() {
     });
 }
 
-async function deleteEntry(timestamp) {
+// **FIX**: Assign deleteEntry to the window object to make it accessible to onclick handlers
+window.deleteEntry = async function(timestamp) {
     const token = localStorage.getItem('journal_token');
     if (!token) {
         showStatus('Please log in to delete entries.', 'error');
@@ -1543,20 +1531,20 @@ function exportEntries(format) {
 }
 
 function generateTextExport(exportData) {
-    let text = 'PRIVATE JOURNAL EXPORT\n';
-    text += 'User: ' + exportData.user + '\n';
-    text += 'Export Date: ' + new Date(exportData.exportDate).toLocaleString() + '\n';
-    text += 'Total Entries: ' + exportData.totalEntries + '\n';
-    text += '='.repeat(50) + '\n\n';
+    let text = 'PRIVATE JOURNAL EXPORT\\n';
+    text += 'User: ' + exportData.user + '\\n';
+    text += 'Export Date: ' + new Date(exportData.exportDate).toLocaleString() + '\\n';
+    text += 'Total Entries: ' + exportData.totalEntries + '\\n';
+    text += '='.repeat(50) + '\\n\\n';
     
     exportData.entries.forEach((entry, index) => {
-        text += 'ENTRY ' + (index + 1) + '\n';
-        text += 'Title: ' + (entry.title || 'Untitled') + '\n';
-        text += 'Date: ' + new Date(entry.timestamp).toLocaleString() + '\n';
-        if (entry.mood) text += 'Mood: ' + entry.mood + '\n';
-        if (entry.tags && entry.tags.length > 0) text += 'Tags: ' + entry.tags.join(', ') + '\n';
-        text += '\n' + entry.content + '\n';
-        text += '-'.repeat(30) + '\n\n';
+        text += 'ENTRY ' + (index + 1) + '\\n';
+        text += 'Title: ' + (entry.title || 'Untitled') + '\\n';
+        text += 'Date: ' + new Date(entry.timestamp).toLocaleString() + '\\n';
+        if (entry.mood) text += 'Mood: ' + entry.mood + '\\n';
+        if (entry.tags && entry.tags.length > 0) text += 'Tags: ' + entry.tags.join(', ') + '\\n';
+        text += '\\n' + entry.content + '\\n';
+        text += '-'.repeat(30) + '\\n\\n';
     });
     
     return text;
