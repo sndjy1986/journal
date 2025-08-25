@@ -1,3 +1,6 @@
+//went thru and removed all my notes from all files - makes it easier to read
+
+
 # 📓 Cloudflare Journal Worker
 
 A secure, private, and serverless journaling application built entirely on the Cloudflare stack. This project uses Cloudflare Workers for compute, Cloudflare KV for storage, and serves a feature-rich, single-page application directly from the edge.
